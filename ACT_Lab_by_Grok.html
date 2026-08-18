@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
@@ -40,6 +40,7 @@
       flex-direction: column;
       height: 100%;
       min-height: 0;
+      position: relative;
     }
     .bar {
       flex: 0 0 auto;
@@ -490,21 +491,135 @@
       background: #1e3a2c;
       color: var(--accent);
     }
+    #lang-gate {
+      position: absolute;
+      inset: 0;
+      z-index: 80;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      overflow: auto;
+    }
+    #app.lang-ready #lang-gate { display: none; }
+    #lang-gate-card {
+      width: min(460px, 100%);
+      margin: auto;
+      text-align: center;
+      padding: 28px 24px 24px;
+      background: #1c1c1c;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+    #lang-gate-card h1 {
+      margin: 0 0 14px;
+      font-size: 28px;
+    }
+    #lang-gate-card p {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    #lang-gate-card p.lang-pick {
+      margin: 0 0 22px;
+    }
+    #intro-mask {
+      display: none;
+      position: absolute;
+      inset: 0;
+      z-index: 70;
+      background: rgba(0, 0, 0, 0.62);
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    #app.intro-open #intro-mask { display: flex; }
+    #intro-card {
+      width: min(520px, 100%);
+      max-height: min(88dvh, 640px);
+      overflow: auto;
+      background: #1c1c1c;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px 22px 18px;
+      color: var(--text);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+      -webkit-user-select: text;
+      user-select: text;
+    }
+    #intro-card h2 {
+      margin: 0 0 12px;
+      font-size: 22px;
+    }
+    #intro-card p {
+      margin: 0 0 12px;
+      font-size: 15px;
+      line-height: 1.55;
+      color: #ddd;
+    }
+    .intro-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+    .intro-actions .btn {
+      min-width: 120px;
+      min-height: 44px;
+      font-size: 16px;
+    }
+    .lang-gate-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+    .lang-gate-actions .btn {
+      min-width: 140px;
+      min-height: 52px;
+      font-size: 18px;
+    }
+    .lang-gate-actions .btn.last {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
 
   </style>
 </head>
 <body>
   <div id="app" class="mode-edit">
+    <div id="lang-gate" role="dialog" aria-modal="true" aria-labelledby="lang-gate-title">
+      <div id="lang-gate-card">
+        <h1 id="lang-gate-title">ACT Lab</h1>
+        <p>本網頁只適合 iPad、平板或電腦操作。<br>This page is only for iPad, tablet, or computer.</p>
+        <p class="lang-pick">選擇語言 / Choose language</p>
+        <div class="lang-gate-actions">
+          <button type="button" class="btn" id="lang-pick-zh" data-pick-lang="zh">中文</button>
+          <button type="button" class="btn" id="lang-pick-en" data-pick-lang="en">English</button>
+        </div>
+      </div>
+    </div>
+    <div id="intro-mask" role="dialog" aria-modal="true" aria-labelledby="intro-title">
+      <div id="intro-card">
+        <h2 id="intro-title" data-i18n="intro_title">ACT Lab</h2>
+        <p data-i18n="intro_p1">喺格仔地圖上砌牆、放老鼠、EXIT 同蛋糕，然後即場跑實驗。</p>
+        <p data-i18n="intro_p2">老鼠唔知你點設計地圖，只靠有限視力探索。牆擋住就睇唔到轉角後。蛋糕可選——見到先會去食，食完再搵出口。</p>
+        <p data-i18n="intro_p3">畫面分兩邊：一邊係老鼠眼中嘅迷霧，一邊係你見到嘅全圖。編輯完同一張地圖，直接撳「跑實驗」。</p>
+        <div class="intro-actions">
+          <button type="button" class="btn primary" id="btn-intro-start" data-i18n="intro_start">開始</button>
+        </div>
+      </div>
+    </div>
     <div class="bar" id="bar-mode">
+      <button type="button" class="btn" id="btn-lang" data-i18n-title="lang_title" title="語言 / Language" aria-label="Language">
+        <span class="lang-opt" data-lang="zh">中文</span>
+        <span class="lang-opt" data-lang="en">EN</span>
+      </button>
       <button type="button" class="btn active" id="btn-mode-edit" data-i18n="mode_edit">編輯地圖</button>
       <button type="button" class="btn primary" id="btn-mode-run" data-i18n="mode_run">跑實驗</button>
       <span class="hint" data-i18n="hint_same_map">同一張地圖：編輯完直接跑老鼠食蛋糕。</span>
       <span id="run-ready" class="no">欠老鼠、EXIT</span>
       <button type="button" class="btn" id="btn-guide" data-i18n="guide">指南</button>
-      <button type="button" class="btn" id="btn-lang" data-i18n-title="lang_title" title="語言 / Language" aria-label="Language">
-        <span class="lang-opt on" data-lang="zh">中文</span>
-        <span class="lang-opt" data-lang="en">EN</span>
-      </button>
     </div>
     <div class="bar" id="presets">
       <button type="button" class="preset" data-tool="wall" id="tool-wall"><span class="k">1</span><span class="wall-swatch"></span><span data-i18n="tool_wall">牆</span></button>
@@ -629,6 +744,978 @@
 <script>
 (function () {
   "use strict";
+  var DEFAULT_MAP = {
+  "format": "ACT_MAP_CREATOR",
+  "version": 1,
+  "createdBy": "Grok",
+  "notes": {
+    "coordinates": "Top-left tile is (0,0). X increases right. Y increases down.",
+    "walls": "A wall's x,y is its start grid intersection. orientation H extends to (x+1,y). orientation V extends to (x,y+1). Walls lie on grid lines and do not occupy tile interiors."
+  },
+  "map": {
+    "columns": 20,
+    "rows": 12,
+    "tileSize": 40
+  },
+  "items": [
+    {
+      "type": "wall",
+      "x": 5,
+      "y": 1,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 4,
+      "y": 2,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 3,
+      "y": 2,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 2,
+      "y": 2,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 1,
+      "y": 0,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 6,
+      "y": 0,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 6,
+      "y": 1,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 5,
+      "y": 0,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 1,
+      "y": 2,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 1,
+      "y": 2,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 2,
+      "y": 3,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 3,
+      "y": 3,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 1,
+      "y": 3,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 2,
+      "y": 3,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 1,
+      "y": 4,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 3,
+      "y": 4,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 3,
+      "y": 5,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 3,
+      "y": 6,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 3,
+      "y": 7,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 3,
+      "y": 8,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 3,
+      "y": 11,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 4,
+      "y": 11,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 5,
+      "y": 11,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 6,
+      "y": 10,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 6,
+      "y": 10,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 8,
+      "y": 10,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 7,
+      "y": 10,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 9,
+      "y": 10,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 10,
+      "y": 10,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 11,
+      "y": 10,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 13,
+      "y": 10,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 12,
+      "y": 10,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 13,
+      "y": 11,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 14,
+      "y": 11,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 15,
+      "y": 11,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 16,
+      "y": 11,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 17,
+      "y": 11,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 18,
+      "y": 11,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 19,
+      "y": 11,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 20,
+      "y": 10,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 20,
+      "y": 9,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 20,
+      "y": 8,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 20,
+      "y": 7,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 20,
+      "y": 6,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 19,
+      "y": 6,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 19,
+      "y": 6,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 18,
+      "y": 7,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 17,
+      "y": 7,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 16,
+      "y": 7,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 17,
+      "y": 8,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 18,
+      "y": 8,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 19,
+      "y": 8,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 19,
+      "y": 9,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 18,
+      "y": 10,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 17,
+      "y": 10,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 16,
+      "y": 10,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 16,
+      "y": 8,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 16,
+      "y": 5,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 16,
+      "y": 6,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 16,
+      "y": 5,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 17,
+      "y": 5,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 18,
+      "y": 5,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 19,
+      "y": 5,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 20,
+      "y": 4,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 20,
+      "y": 3,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 20,
+      "y": 2,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 20,
+      "y": 1,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 19,
+      "y": 1,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 18,
+      "y": 1,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 17,
+      "y": 1,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 16,
+      "y": 1,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 16,
+      "y": 1,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 17,
+      "y": 2,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 16,
+      "y": 3,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 18,
+      "y": 2,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 19,
+      "y": 2,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 18,
+      "y": 3,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 18,
+      "y": 3,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 17,
+      "y": 4,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 16,
+      "y": 4,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 17,
+      "y": 2,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 16,
+      "y": 2,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 16,
+      "y": 3,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 15,
+      "y": 1,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 14,
+      "y": 1,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 14,
+      "y": 1,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 14,
+      "y": 2,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 12,
+      "y": 3,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 13,
+      "y": 3,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 11,
+      "y": 3,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 11,
+      "y": 2,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 11,
+      "y": 0,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 12,
+      "y": 0,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 13,
+      "y": 0,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 11,
+      "y": 1,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 12,
+      "y": 1,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 10,
+      "y": 0,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 9,
+      "y": 1,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 8,
+      "y": 1,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 7,
+      "y": 1,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 7,
+      "y": 0,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 8,
+      "y": 0,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 7,
+      "y": 0,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 9,
+      "y": 0,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 10,
+      "y": 2,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 9,
+      "y": 3,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 8,
+      "y": 3,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 7,
+      "y": 3,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 7,
+      "y": 2,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 6,
+      "y": 2,
+      "orientation": "H"
+    },
+    {
+      "type": "mouse",
+      "x": 5,
+      "y": 0,
+      "direction": "N"
+    },
+    {
+      "type": "cake",
+      "x": 16,
+      "y": 2
+    },
+    {
+      "type": "wall",
+      "x": 2,
+      "y": 9,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 2,
+      "y": 8,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 2,
+      "y": 7,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 2,
+      "y": 6,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 1,
+      "y": 6,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 1,
+      "y": 7,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 1,
+      "y": 11,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 1,
+      "y": 8,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 1,
+      "y": 9,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 1,
+      "y": 10,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 2,
+      "y": 11,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 1,
+      "y": 5,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 1,
+      "y": 5,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 2,
+      "y": 5,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 4,
+      "y": 0,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 3,
+      "y": 0,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 2,
+      "y": 0,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 1,
+      "y": 0,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 2,
+      "y": 1,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 3,
+      "y": 1,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 4,
+      "y": 1,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 10,
+      "y": 1,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 11,
+      "y": 1,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 17,
+      "y": 8,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 17,
+      "y": 9,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 17,
+      "y": 6,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 17,
+      "y": 5,
+      "orientation": "V"
+    },
+    {
+      "type": "cake",
+      "x": 4,
+      "y": 1
+    },
+    {
+      "type": "wall",
+      "x": 1,
+      "y": 1,
+      "orientation": "V"
+    },
+    {
+      "type": "exit",
+      "x": 16,
+      "y": 9
+    },
+    {
+      "type": "wall",
+      "x": 16,
+      "y": 9,
+      "orientation": "V"
+    },
+    {
+      "type": "cake",
+      "x": 2,
+      "y": 8
+    },
+    {
+      "type": "wall",
+      "x": 5,
+      "y": 6,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 6,
+      "y": 6,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 7,
+      "y": 6,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 8,
+      "y": 6,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 12,
+      "y": 6,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 8,
+      "y": 7,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 7,
+      "y": 7,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 6,
+      "y": 7,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 5,
+      "y": 7,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 5,
+      "y": 6,
+      "orientation": "V"
+    },
+    {
+      "type": "wall",
+      "x": 9,
+      "y": 6,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 10,
+      "y": 6,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 11,
+      "y": 6,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 9,
+      "y": 7,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 10,
+      "y": 7,
+      "orientation": "H"
+    },
+    {
+      "type": "wall",
+      "x": 11,
+      "y": 7,
+      "orientation": "H"
+    }
+  ]
+};
 var AI_NAME = "Grok";
   var FILE_BASE = "ACT_Lab_by_Grok";
   var SAND = "#E6C98A";
@@ -690,6 +1777,11 @@ var AI_NAME = "Grok";
       guide_ctrl_2: "按住 Shift 拖動地圖；右鍵刪除物件。",
       guide_ctrl_3: "齊件之後撳「跑實驗」，再撳「執行」。",
       later: "稍後", got_it: "知道了", lang_title: "語言 / Language",
+      intro_title: "ACT Lab",
+      intro_p1: "喺格仔地圖上砌牆、放老鼠、EXIT 同蛋糕，然後即場跑實驗。",
+      intro_p2: "老鼠唔知你點設計地圖，只靠有限視力探索。牆擋住就睇唔到轉角後。蛋糕可選——見到先會去食，食完再搵出口。",
+      intro_p3: "畫面分兩邊：一邊係老鼠眼中嘅迷霧，一邊係你見到嘅全圖。編輯完同一張地圖，直接撳「跑實驗」。",
+      intro_start: "開始",
       dir_N: "北", dir_NE: "東北", dir_E: "東", dir_SE: "東南",
       dir_S: "南", dir_SW: "西南", dir_W: "西", dir_NW: "西北",
       status_wall: "拖動畫牆；按住 Shift 拖動地圖，放開還原",
@@ -783,6 +1875,11 @@ var AI_NAME = "Grok";
       guide_ctrl_2: "Hold Shift to pan the map. Right-click deletes an item.",
       guide_ctrl_3: "When ready, press Run Lab, then Run.",
       later: "Later", got_it: "Got it", lang_title: "Language / 語言",
+      intro_title: "ACT Lab",
+      intro_p1: "Build a grid map with walls, a mouse, EXIT, and optional cakes, then run the experiment on the same map.",
+      intro_p2: "The mouse does not know your design. It explores with limited vision; walls block line of sight. Cakes are optional: it eats them only after seeing them, then looks for EXIT.",
+      intro_p3: "You get two views: the mouse’s fog, and the full map. After editing, press Run Lab.",
+      intro_start: "Start",
       dir_N: "North", dir_NE: "Northeast", dir_E: "East", dir_SE: "Southeast",
       dir_S: "South", dir_SW: "Southwest", dir_W: "West", dir_NW: "Northwest",
       status_wall: "Drag to draw a wall; hold Shift to pan, release restores the last tool",
@@ -847,14 +1944,7 @@ var AI_NAME = "Grok";
       paused_n: "Paused at step {n}  {know}", ready: "Ready"
     }
   };
-  var lang = "zh";
-  function detectLang() {
-    try {
-      var saved = localStorage.getItem(LANG_KEY);
-      if (saved === "en" || saved === "zh") return saved;
-    } catch (err) {}
-    return "zh";
-  }
+  var lang = "";
   function t(key, vars) {
     var dict = I18N[lang] || I18N.zh;
     var s = dict[key];
@@ -938,7 +2028,19 @@ var AI_NAME = "Grok";
     try { localStorage.setItem(LANG_KEY, lang); } catch (err) {}
     applyLang();
   }
-  lang = detectLang();
+  function hideLangGate() {
+    if (appEl) appEl.classList.add("lang-ready");
+  }
+  function chooseLang(next) {
+    if (next !== "zh" && next !== "en") return;
+    lang = next;
+    try { localStorage.setItem(LANG_KEY, lang); } catch (err) {}
+    hideLangGate();
+    applyLang();
+    loadDefaultMap();
+    setUiMode("run");
+    openIntro();
+  }
 
   var canvasEdit = document.getElementById("map-edit");
   var ctxEdit = canvasEdit.getContext("2d");
@@ -1598,11 +2700,40 @@ var AI_NAME = "Grok";
   }
 
   function maybeShowFirstGuide() {
+    if (lang !== "zh" && lang !== "en") return;
     try {
       if (!localStorage.getItem(GUIDE_KEY)) openGuide();
     } catch (err) {
       openGuide();
     }
+  }
+
+  function isIntroOpen() {
+    return appEl.classList.contains("intro-open");
+  }
+
+  function openIntro() {
+    if (appEl) appEl.classList.add("intro-open");
+  }
+
+  function closeIntro() {
+    if (appEl) appEl.classList.remove("intro-open");
+  }
+
+  function startAfterIntro() {
+    closeIntro();
+    loadDefaultMap();
+    setUiMode("run");
+    resizeCanvas();
+    fitScreen();
+    startRun();
+  }
+
+  function loadDefaultMap() {
+    if (typeof DEFAULT_MAP === "undefined" || !DEFAULT_MAP) return;
+    loadJSONText(JSON.stringify(DEFAULT_MAP));
+    mapNameState = { type: "file", name: "ACT_Lab_by_Grok.json" };
+    updateMapName();
   }
 
   function setTool(t) {
@@ -2124,6 +3255,11 @@ var AI_NAME = "Grok";
       }
       return;
     }
+    if (isIntroOpen()) {
+      e.preventDefault();
+      if (e.key === "Enter") startAfterIntro();
+      return;
+    }
     if (isGuideOpen()) {
       e.preventDefault();
       closeGuide(false);
@@ -2292,7 +3428,7 @@ var AI_NAME = "Grok";
       setStatus(t("invalid_json"));
       return;
     }
-    var cols = data.map.columns;
+    var cols = data.map.columns != null ? data.map.columns : data.map.cols;
     var rws = data.map.rows;
     var ts = data.map.tileSize;
     if (![cols, rws, ts].every(function (n) { return typeof n === "number" && Number.isInteger(n); })) {
@@ -3624,10 +4760,15 @@ var originalItems = [];
     document.getElementById("btn-guide").addEventListener("click", function () { openGuide(); });
     document.getElementById("btn-guide-ok").addEventListener("click", function () { closeGuide(true); });
     document.getElementById("btn-guide-later").addEventListener("click", function () { closeGuide(false); });
+    document.getElementById("btn-intro-start").addEventListener("click", startAfterIntro);
     document.getElementById("btn-lang").addEventListener("click", function (e) {
       var pick = e.target && e.target.getAttribute("data-lang");
       if (pick === "zh" || pick === "en") setLang(pick);
-      else setLang(lang === "zh" ? "en" : "zh");
+      else if (lang === "zh" || lang === "en") setLang(lang === "zh" ? "en" : "zh");
+    });
+    document.getElementById("lang-gate").addEventListener("click", function (e) {
+      var pick = e.target && e.target.getAttribute("data-pick-lang");
+      if (pick === "zh" || pick === "en") chooseLang(pick);
     });
     document.getElementById("guide-mask").addEventListener("click", function (e) {
       if (e.target === document.getElementById("guide-mask")) closeGuide(false);
@@ -3770,10 +4911,9 @@ var originalItems = [];
 
 
   bind();
-  applyLang();
+  loadDefaultMap();
   resizeCanvas();
   fitScreen();
-  maybeShowFirstGuide();
 })();
 </script>
 </body>
