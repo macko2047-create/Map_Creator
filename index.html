@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>ACT Lab</title>
+  <style>
+    :root {
+      --bg: #161616;
+      --panel: #242424;
+      --border: #3d3d3d;
+      --text: #f0f0f0;
+      --muted: #9a9a9a;
+      --accent: #3dd68c;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif;
+    }
+    main {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 48px 20px 32px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+    }
+    p {
+      margin: 0 0 24px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    a.card {
+      display: block;
+      padding: 16px 18px;
+      margin: 0 0 10px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      text-decoration: none;
+    }
+    a.card.primary {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+    a.card strong {
+      display: block;
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+    a.card span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>ACT Lab</h1>
+    <p>Edit a map, then run the mouse. 編輯地圖，然後跑實驗。</p>
+    <a class="card primary" href="ACT_Lab_by_Grok.html">
+      <strong>ACT Lab by Grok</strong>
+      <span>中文／English · map editor + experiment</span>
+    </a>
+    <a class="card" href="ACT_Map_Creator_by_Grok.html">
+      <strong>Map Creator</strong>
+      <span>English map editor</span>
+    </a>
+    <a class="card" href="ACT_Mouse_Runner_by_Grok.html">
+      <strong>Mouse Runner</strong>
+      <span>Load a JSON map and run</span>
+    </a>
+  </main>
+</body>
+</html>
