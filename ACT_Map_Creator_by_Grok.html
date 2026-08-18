@@ -1,0 +1,1862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>ACT Map Creator by Grok</title>
+  <style>
+    :root {
+      --sand: #E6C98A;
+      --grid: #000000;
+      --wall: #8B4513;
+      --bg: #161616;
+      --panel: #242424;
+      --border: #3d3d3d;
+      --text: #f0f0f0;
+      --muted: #9a9a9a;
+      --accent: #3dd68c;
+      --danger: #e85d5d;
+      --exit: #FFD400;
+      --btn: 44px;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      min-height: 0;
+      position: relative;
+    }
+    .bar {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+      touch-action: pan-x;
+    }
+    #presets { min-height: var(--btn); }
+    .preset {
+      position: relative;
+      flex: 0 0 auto;
+      min-width: 64px;
+      height: var(--btn);
+      padding: 0 10px 0 18px;
+      border: 2px solid #555;
+      border-radius: 8px;
+      background: #333;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      touch-action: manipulation;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .preset .k {
+      position: absolute;
+      top: 2px;
+      left: 4px;
+      font-size: 10px;
+      color: #ddd;
+      background: #111;
+      padding: 0 3px;
+      border-radius: 3px;
+      line-height: 1.3;
+    }
+    .preset.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
+      background: #1e3a2c;
+    }
+    .wall-swatch {
+      width: 22px;
+      height: 8px;
+      background: var(--wall);
+      border-radius: 1px;
+    }
+    .exit-swatch {
+      background: var(--exit);
+      color: #111;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+    button.btn, .file-btn {
+      flex: 0 0 auto;
+      min-height: var(--btn);
+      min-width: var(--btn);
+      padding: 0 12px;
+      border: 1px solid #555;
+      border-radius: 8px;
+      background: #333;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      touch-action: manipulation;
+      white-space: nowrap;
+    }
+    button.btn:active, .preset:active { filter: brightness(1.15); }
+    button.btn.danger { border-color: #7a3030; background: #3a1c1c; }
+    button.btn.primary { border-color: #2e7d32; background: #1e3d20; }
+    label.field {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+      flex: 0 0 auto;
+    }
+    label.field input {
+      width: 56px;
+      height: 36px;
+      min-height: 36px;
+      border: 1px solid #555;
+      border-radius: 6px;
+      background: #1b1b1b;
+      color: var(--text);
+      text-align: center;
+      font-size: 14px;
+      -webkit-user-select: text;
+      user-select: text;
+      touch-action: manipulation;
+    }
+    #dir-pad {
+      display: grid;
+      grid-template-columns: 44px 44px 44px;
+      grid-template-rows: 44px 44px 44px;
+      gap: 2px;
+      flex: 0 0 auto;
+      margin-left: 4px;
+    }
+    #dir-pad button {
+      min-width: 0;
+      min-height: 0;
+      padding: 0;
+      font-size: 16px;
+    }
+    #dir-n { grid-column: 2; grid-row: 1; }
+    #dir-w { grid-column: 1; grid-row: 2; }
+    #dir-e { grid-column: 3; grid-row: 2; }
+    #dir-s { grid-column: 2; grid-row: 3; }
+    #dir-pad button.active { border-color: var(--accent); background: #1e3a2c; }
+    #stage {
+      position: relative;
+      flex: 1 1 auto;
+      min-height: 0;
+      background: #0e0e0e;
+      overflow: hidden;
+    }
+    #map {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: default;
+    }
+    #map.cross { cursor: crosshair; }
+    #map.pan-mod,
+    #map.pan-mod.cross { cursor: grab; }
+    #map.grabbing { cursor: grabbing; }
+    #zoom {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 5;
+    }
+    #zoom button {
+      width: var(--btn);
+      height: var(--btn);
+      min-width: var(--btn);
+      font-size: 22px;
+      line-height: 1;
+      background: rgba(30,30,30,0.92);
+    }
+    #footer {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+      background: var(--panel);
+      border-top: 1px solid var(--border);
+      overflow-x: auto;
+    }
+    #status {
+      flex: 1 1 auto;
+      min-width: 120px;
+      font-size: 12px;
+      color: #c8c8c8;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #credit {
+      flex: 0 0 auto;
+      font-size: 12px;
+      font-weight: 700;
+      color: #d0d0d0;
+      white-space: nowrap;
+      padding-right: 4px;
+    }
+    .hint {
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+      flex: 0 0 auto;
+    }
+    @media (max-width: 720px), (orientation: portrait) and (max-width: 1024px) {
+      #settings { flex-wrap: wrap; }
+      #dir-pad {
+        grid-template-rows: 44px 44px 44px;
+      }
+      #status { max-width: 42vw; }
+    }
+    #run-ready {
+      flex: 0 0 auto;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid #555;
+      white-space: nowrap;
+    }
+    #run-ready.ok {
+      color: #0e0e0e;
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    #run-ready.no {
+      color: #fff;
+      background: #5a2424;
+      border-color: var(--danger);
+    }
+    #guide-mask {
+      display: none;
+      position: absolute;
+      inset: 0;
+      z-index: 40;
+      background: rgba(0, 0, 0, 0.58);
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    #app.guide-open #guide-mask { display: flex; }
+    #guide-card {
+      width: min(540px, 100%);
+      max-height: min(88dvh, 680px);
+      overflow: auto;
+      background: #1c1c1c;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 18px 14px;
+      color: var(--text);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+      -webkit-user-select: text;
+      user-select: text;
+    }
+    #guide-card h2 { margin: 0 0 8px; font-size: 18px; }
+    #guide-card .guide-lead {
+      margin: 0 0 10px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    #guide-card h3 {
+      margin: 14px 0 6px;
+      font-size: 13px;
+      color: var(--accent);
+    }
+    #guide-card ul { margin: 0; padding-left: 18px; }
+    #guide-card li {
+      margin: 4px 0;
+      font-size: 13px;
+      line-height: 1.45;
+      color: #ddd;
+    }
+    #guide-card b { color: #fff; }
+    .guide-check { list-style: none; padding-left: 0; margin: 0 0 4px; }
+    .guide-check li { display: flex; gap: 8px; align-items: flex-start; }
+    .guide-check .mark { flex: 0 0 18px; font-weight: 800; }
+    .guide-check .ok { color: var(--accent); }
+    .guide-check .no { color: var(--danger); }
+    .guide-check .opt { color: var(--muted); }
+    .guide-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+      justify-content: flex-end;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="bar" id="presets">
+      <button type="button" class="preset" data-tool="wall" id="tool-wall"><span class="k">1</span><span class="wall-swatch"></span>Wall</button>
+      <button type="button" class="preset" data-tool="mouse" id="tool-mouse"><span class="k">2</span>🐭 Mouse</button>
+      <button type="button" class="preset" data-tool="exit" id="tool-exit"><span class="k">3</span><span class="exit-swatch">EXIT</span></button>
+      <button type="button" class="preset" data-tool="cake" id="tool-cake"><span class="k">4</span>🍰 Cake</button>
+      <button type="button" class="preset" data-tool="select" id="tool-select"><span class="k">5</span>Select</button>
+      <button type="button" class="btn" id="btn-cancel">Cancel</button>
+      <button type="button" class="btn" id="btn-last">Last Tool</button>
+      <span id="run-ready" class="no">Need mouse + EXIT</span>
+      <button type="button" class="btn" id="btn-guide">Guide</button>
+    </div>
+    <div class="bar" id="settings">
+      <label class="field">Cols <input id="inp-cols" type="number" min="1" max="200" value="20" inputmode="numeric"></label>
+      <label class="field">Rows <input id="inp-rows" type="number" min="1" max="200" value="12" inputmode="numeric"></label>
+      <button type="button" class="btn" id="btn-apply-size">Apply Size</button>
+      <label class="field">Tile <input id="inp-tile" type="number" min="8" max="128" value="40" inputmode="numeric"></label>
+      <button type="button" class="btn" id="btn-fit-screen">Fit Screen</button>
+      <button type="button" class="btn" id="btn-fit-creation">Fit Creation</button>
+      <button type="button" class="btn" id="btn-select-all">Select All</button>
+      <button type="button" class="btn danger" id="btn-delete">Delete</button>
+      <button type="button" class="btn" id="btn-rotate">Rotate</button>
+      <div id="dir-pad" aria-label="Mouse direction">
+        <button type="button" class="btn" id="dir-n" data-dir="N">↑</button>
+        <button type="button" class="btn" id="dir-w" data-dir="W">←</button>
+        <button type="button" class="btn" id="dir-e" data-dir="E">→</button>
+        <button type="button" class="btn" id="dir-s" data-dir="S">↓</button>
+      </div>
+      <span class="hint">Select: drag a box or click items. Hold Shift to pan; release restores the last tool.</span>
+    </div>
+    <div id="stage">
+      <canvas id="map"></canvas>
+      <div id="zoom">
+        <button type="button" class="btn" id="btn-zoom-in">+</button>
+        <button type="button" class="btn" id="btn-zoom-out">−</button>
+      </div>
+    </div>
+    <div id="footer">
+      <button type="button" class="btn primary" id="btn-png">Save PNG</button>
+      <button type="button" class="btn primary" id="btn-json">Save JSON</button>
+      <button type="button" class="btn" id="btn-load">Load JSON</button>
+      <span id="status">Ready</span>
+      <span id="credit">Created By Grok</span>
+    </div>
+    <div id="guide-mask" role="dialog" aria-modal="true" aria-labelledby="guide-title">
+      <div id="guide-card">
+        <h2 id="guide-title">Runnable map guide</h2>
+        <p class="guide-lead">First-time use: a map can be run in ACT Lab only when the required pieces are present.</p>
+        <ul class="guide-check" id="guide-check"></ul>
+        <h3>Required</h3>
+        <ul>
+          <li>Place <b>1 mouse</b> on a tile and set its facing with ↑ ← → ↓.</li>
+          <li>Place <b>1 EXIT</b> on a different tile (the goal).</li>
+          <li>Mouse, EXIT, and cakes <b>cannot share the same tile</b>.</li>
+        </ul>
+        <h3>Recommended</h3>
+        <ul>
+          <li>Draw walls on <b>grid lines</b> to form a maze; walls do not occupy tile interiors.</li>
+          <li>Cakes are optional. The mouse does not know the full map; it eats cakes only after seeing them, then looks for EXIT.</li>
+          <li>Leave a path from the mouse to EXIT; do not wall it in completely.</li>
+          <li>If you place extra mice or EXITs, the run uses only the first of each.</li>
+        </ul>
+        <h3>Controls</h3>
+        <ul>
+          <li>1 wall (drag to set length) · 2 mouse · 3 EXIT · 4 cake · 5 select (drag a box)</li>
+          <li>Hold Shift to pan the map. Right-click deletes an item.</li>
+          <li>Save JSON, then open it in ACT Lab and press Run.</li>
+        </ul>
+        <div class="guide-actions">
+          <button type="button" class="btn" id="btn-guide-later">Later</button>
+          <button type="button" class="btn primary" id="btn-guide-ok">Got it</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <input id="file-json" type="file" accept=".json,application/json" hidden>
+<script>
+(function () {
+  "use strict";
+
+  var AI_NAME = "Grok";
+  var FILE_BASE = "ACT_Map_Creator_by_Grok";
+  var SAND = "#E6C98A";
+  var GRID = "#000000";
+  var WALL = "#8B4513";
+  var EXIT_BG = "#FFD400";
+  var SELECT = "#2F80ED";
+  var GUIDE_KEY = "ACT_Map_Creator_by_Grok_guide_v1";
+  var MIN_SIZE = 1;
+  var MAX_SIZE = 200;
+  var MIN_TILE = 8;
+  var MAX_TILE = 128;
+  var DIRS = ["N", "E", "S", "W"];
+  var DIR_VEC = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] };
+  var DIR_NAME = { N: "North", E: "East", S: "South", W: "West" };
+
+  var canvas = document.getElementById("map");
+  var ctx = canvas.getContext("2d");
+  var appEl = document.getElementById("app");
+  var stage = document.getElementById("stage");
+  var statusEl = document.getElementById("status");
+  var fileInput = document.getElementById("file-json");
+  var inpCols = document.getElementById("inp-cols");
+  var inpRows = document.getElementById("inp-rows");
+  var inpTile = document.getElementById("inp-tile");
+
+  var columns = 20;
+  var rows = 12;
+  var tileSize = 40;
+  var items = [];
+  var nextId = 1;
+  var selected = {};
+  var tool = null;
+  var lastTool = null;
+  var wallLock = null;
+  var mouseDir = "N";
+  var zoom = 1;
+  var panX = 0;
+  var panY = 0;
+  var cssW = 1;
+  var cssH = 1;
+  var dpr = 1;
+  var hover = null;
+  var flash = null;
+  var statusTimer = 0;
+
+  var ptr = null;
+  var lastTap = { t: 0, x: 0, y: 0 };
+  var spaceHeld = false;
+  var shiftHeld = false;
+  var wallStrokePreview = null;
+
+  function clone(it) {
+    return JSON.parse(JSON.stringify(it));
+  }
+
+  function setStatus(msg) {
+    statusEl.textContent = msg;
+    if (statusTimer) clearTimeout(statusTimer);
+    statusTimer = setTimeout(function () {
+      if (statusEl.textContent === msg) statusEl.textContent = toolStatus();
+    }, 3500);
+  }
+
+  function toolStatus() {
+    if (tool === "wall") return "Drag to draw wall; hold Shift to pan, release to restore";
+    if (tool === "mouse") return "Mouse facing " + DIR_NAME[mouseDir];
+    if (tool === "exit") return "EXIT selected";
+    if (tool === "cake") return "Cake selected";
+    var n = selectedCount();
+    if (n === 1) {
+      var it = getSelectedItems()[0];
+      if (it.type === "mouse") return "Mouse facing " + DIR_NAME[it.direction];
+      if (it.type === "wall") return "Wall " + it.orientation + " at (" + it.x + "," + it.y + ")";
+      return it.type.toUpperCase() + " selected";
+    }
+    if (n > 1) return n + " items selected";
+    return "Select: drag a box or click items; hold Shift to pan";
+  }
+
+  function selectedCount() {
+    var n = 0, id;
+    for (id in selected) if (selected[id]) n++;
+    return n;
+  }
+
+  function getSelectedItems() {
+    return items.filter(function (it) { return selected[it.id]; });
+  }
+
+  function clearSelected() {
+    selected = {};
+  }
+
+  function selectItem(it, additive) {
+    if (!additive) selected = {};
+    if (it) selected[it.id] = true;
+  }
+
+  function toggleSelect(it) {
+    if (!it) return;
+    if (selected[it.id]) delete selected[it.id];
+    else selected[it.id] = true;
+  }
+
+  function copySelected() {
+    var o = {}, id;
+    for (id in selected) if (selected[id]) o[id] = true;
+    return o;
+  }
+
+  function marqueeRect(x0, y0, x1, y1) {
+    return {
+      x0: Math.min(x0, x1),
+      y0: Math.min(y0, y1),
+      x1: Math.max(x0, x1),
+      y1: Math.max(y0, y1)
+    };
+  }
+
+  function itemHitsMarquee(it, box) {
+    var ts = tileSize;
+    if (it.type === "wall") {
+      if (it.orientation === "H") {
+        var hy = it.y * ts;
+        return hy >= box.y0 && hy <= box.y1 && it.x * ts < box.x1 && (it.x + 1) * ts > box.x0;
+      }
+      var vx = it.x * ts;
+      return vx >= box.x0 && vx <= box.x1 && it.y * ts < box.y1 && (it.y + 1) * ts > box.y0;
+    }
+    return it.x * ts < box.x1 && (it.x + 1) * ts > box.x0 && it.y * ts < box.y1 && (it.y + 1) * ts > box.y0;
+  }
+
+  function applyMarqueeSelection(box) {
+    var next = {}, i, it;
+    for (i = 0; i < items.length; i++) {
+      it = items[i];
+      if (itemHitsMarquee(it, box)) next[it.id] = true;
+    }
+    selected = next;
+  }
+
+  function drawMarquee(g, z) {
+    if (!ptr || ptr.mode !== "marquee") return;
+    var w = screenToWorld(ptr.lastX, ptr.lastY);
+    var box = marqueeRect(ptr.wx, ptr.wy, w.x, w.y);
+    var bw = box.x1 - box.x0, bh = box.y1 - box.y0;
+    if (bw < 1 && bh < 1) return;
+    z = z || 1;
+    g.save();
+    g.fillStyle = "rgba(47, 128, 237, 0.18)";
+    g.strokeStyle = SELECT;
+    g.lineWidth = Math.max(1, 1.5 / z);
+    g.setLineDash([6 / z, 4 / z]);
+    g.fillRect(box.x0, box.y0, bw, bh);
+    g.strokeRect(box.x0, box.y0, bw, bh);
+    g.restore();
+  }
+
+  function clamp(v, a, b) {
+    return Math.max(a, Math.min(b, v));
+  }
+
+  function tileAt(wx, wy) {
+    var x = Math.floor(wx / tileSize);
+    var y = Math.floor(wy / tileSize);
+    if (x < 0 || y < 0 || x >= columns || y >= rows) return null;
+    return { x: x, y: y };
+  }
+
+  function wallValid(x, y, ori, cols, rws) {
+    cols = cols == null ? columns : cols;
+    rws = rws == null ? rows : rws;
+    if (ori === "H") return x >= 0 && x < cols && y >= 0 && y <= rws;
+    return x >= 0 && x <= cols && y >= 0 && y < rws;
+  }
+
+  function tileValid(x, y, cols, rws) {
+    cols = cols == null ? columns : cols;
+    rws = rws == null ? rows : rws;
+    return x >= 0 && y >= 0 && x < cols && y < rws;
+  }
+
+  function itemValid(it, cols, rws) {
+    if (it.type === "wall") return wallValid(it.x, it.y, it.orientation, cols, rws);
+    return tileValid(it.x, it.y, cols, rws);
+  }
+
+  function sameWall(a, b) {
+    return a.type === "wall" && b.type === "wall" && a.orientation === b.orientation && a.x === b.x && a.y === b.y;
+  }
+
+  function tileKey(x, y) {
+    return x + "," + y;
+  }
+
+  function wallKey(it) {
+    return it.orientation + ":" + it.x + "," + it.y;
+  }
+
+  function occupiedTile(x, y, ignoreId) {
+    var i, it;
+    for (i = 0; i < items.length; i++) {
+      it = items[i];
+      if (it.id === ignoreId || it.type === "wall") continue;
+      if (it.x === x && it.y === y) return it;
+    }
+    return null;
+  }
+
+  function existingWall(ori, x, y, ignoreId) {
+    var i, it;
+    for (i = 0; i < items.length; i++) {
+      it = items[i];
+      if (it.id === ignoreId || it.type !== "wall") continue;
+      if (it.orientation === ori && it.x === x && it.y === y) return it;
+    }
+    return null;
+  }
+
+  function distToWall(wx, wy, it) {
+    var ts = tileSize;
+    var x1, y1, x2, y2;
+    if (it.orientation === "H") {
+      x1 = it.x * ts; y1 = it.y * ts;
+      x2 = (it.x + 1) * ts; y2 = y1;
+    } else {
+      x1 = it.x * ts; y1 = it.y * ts;
+      x2 = x1; y2 = (it.y + 1) * ts;
+    }
+    var dx = x2 - x1, dy = y2 - y1;
+    var len2 = dx * dx + dy * dy;
+    var t = len2 === 0 ? 0 : clamp(((wx - x1) * dx + (wy - y1) * dy) / len2, 0, 1);
+    var px = x1 + t * dx, py = y1 + t * dy;
+    return Math.hypot(wx - px, wy - py);
+  }
+
+  function hitTest(wx, wy) {
+    var edge = Math.max(6, tileSize * 0.2);
+    var best = null, bestD = edge, i, it, d;
+    for (i = 0; i < items.length; i++) {
+      it = items[i];
+      if (it.type !== "wall") continue;
+      d = distToWall(wx, wy, it);
+      if (d < bestD) { bestD = d; best = it; }
+    }
+    var tile = tileAt(wx, wy);
+    var obj = null;
+    if (tile) obj = occupiedTile(tile.x, tile.y, null);
+    if (obj && best) {
+      var localX = wx - tile.x * tileSize;
+      var localY = wy - tile.y * tileSize;
+      var near = localX < edge || localY < edge || localX > tileSize - edge || localY > tileSize - edge;
+      return near ? best : obj;
+    }
+    return obj || best;
+  }
+
+  function snapWall(wx, wy) {
+    var ts = tileSize;
+    var gx = wx / ts;
+    var gy = wy / ts;
+    var distV = Math.abs(gx - Math.round(gx));
+    var distH = Math.abs(gy - Math.round(gy));
+    var ori = wallLock || (distV < distH ? "V" : "H");
+    var x, y;
+    if (ori === "H") {
+      y = Math.round(gy);
+      x = Math.floor(gx);
+      if (gx >= columns) x = columns - 1;
+      x = clamp(x, 0, columns - 1);
+      y = clamp(y, 0, rows);
+    } else {
+      x = Math.round(gx);
+      y = Math.floor(gy);
+      if (gy >= rows) y = rows - 1;
+      x = clamp(x, 0, columns);
+      y = clamp(y, 0, rows - 1);
+    }
+    if (!wallValid(x, y, ori)) return null;
+    var onMap =
+      wx >= -ts * 0.4 && wx <= columns * ts + ts * 0.4 &&
+      wy >= -ts * 0.4 && wy <= rows * ts + ts * 0.4;
+    if (!onMap) return null;
+    return { type: "wall", x: x, y: y, orientation: ori };
+  }
+
+  function snapPreview(wx, wy) {
+    if (tool === "wall") return snapWall(wx, wy);
+    if (!tool) return null;
+    var t = tileAt(wx, wy);
+    if (!t) return null;
+    var prev = { type: tool, x: t.x, y: t.y };
+    if (tool === "mouse") prev.direction = mouseDir;
+    return prev;
+  }
+
+  function placementOk(prev, ignoreId) {
+    if (!prev) return false;
+    if (prev.type === "wall") {
+      if (existingWall(prev.orientation, prev.x, prev.y, ignoreId)) return false;
+      return wallValid(prev.x, prev.y, prev.orientation);
+    }
+    if (occupiedTile(prev.x, prev.y, ignoreId)) return false;
+    return tileValid(prev.x, prev.y);
+  }
+
+  function flashOccupied(x, y, msg) {
+    flash = { x: x, y: y, until: performance.now() + 450 };
+    setStatus(msg);
+    draw();
+  }
+
+  function placePreview(prev) {
+    if (!prev) return false;
+    if (prev.type === "wall" && existingWall(prev.orientation, prev.x, prev.y, null)) {
+      flashOccupied(prev.x, prev.y, "Wall already exists");
+      return false;
+    }
+    if (prev.type !== "wall" && occupiedTile(prev.x, prev.y, null)) {
+      flashOccupied(prev.x, prev.y, "Tile occupied");
+      return false;
+    }
+    var it = clone(prev);
+    it.id = nextId++;
+    items.push(it);
+    if (it.type === "wall") setStatus(toolStatus());
+    else if (it.type === "mouse") setStatus("Mouse facing " + DIR_NAME[it.direction]);
+    else setStatus(it.type === "exit" ? "EXIT placed" : "Cake placed");
+    return true;
+  }
+
+  function setSpaceHeld(on) {
+    spaceHeld = !!on;
+    updatePanCursor();
+  }
+
+  function setShiftHeld(on) {
+    shiftHeld = !!on;
+    updatePanCursor();
+  }
+
+  function panModifierOn() {
+    return spaceHeld || shiftHeld;
+  }
+
+  function updatePanCursor() {
+    canvas.classList.toggle("pan-mod", panModifierOn());
+  }
+
+  function wallStrokeFromDrag(startW, curW, pixelDx, pixelDy) {
+    var ori = wallLock || (Math.abs(pixelDx) >= Math.abs(pixelDy) ? "H" : "V");
+    var start = snapWall(startW.x, startW.y);
+    var segs = [];
+    var i, a, b, x, y, x0, x1, y0, y1;
+    if (ori === "H") {
+      y = start && start.orientation === "H" ? start.y : clamp(Math.round(startW.y / tileSize), 0, rows);
+      x0 = start && start.orientation === "H" ? start.x : clamp(Math.floor(startW.x / tileSize), 0, Math.max(0, columns - 1));
+      x1 = clamp(Math.floor(curW.x / tileSize), 0, Math.max(0, columns - 1));
+      a = Math.min(x0, x1);
+      b = Math.max(x0, x1);
+      for (i = a; i <= b; i++) {
+        if (wallValid(i, y, "H")) segs.push({ type: "wall", x: i, y: y, orientation: "H" });
+      }
+    } else {
+      x = start && start.orientation === "V" ? start.x : clamp(Math.round(startW.x / tileSize), 0, columns);
+      y0 = start && start.orientation === "V" ? start.y : clamp(Math.floor(startW.y / tileSize), 0, Math.max(0, rows - 1));
+      y1 = clamp(Math.floor(curW.y / tileSize), 0, Math.max(0, rows - 1));
+      a = Math.min(y0, y1);
+      b = Math.max(y0, y1);
+      for (i = a; i <= b; i++) {
+        if (wallValid(x, i, "V")) segs.push({ type: "wall", x: x, y: i, orientation: "V" });
+      }
+    }
+    return segs;
+  }
+
+  function placeWallStroke(segs) {
+    var added = 0, skipped = 0, i, s, it;
+    for (i = 0; i < segs.length; i++) {
+      s = segs[i];
+      if (!wallValid(s.x, s.y, s.orientation)) continue;
+      if (existingWall(s.orientation, s.x, s.y, null)) {
+        skipped += 1;
+        continue;
+      }
+      it = clone(s);
+      it.id = nextId++;
+      items.push(it);
+      added += 1;
+    }
+    if (added) setStatus(added === 1 ? toolStatus() : "Wall × " + added);
+    else if (skipped) setStatus("Wall already exists");
+    return added > 0;
+  }
+
+  function screenToWorld(sx, sy) {
+    return { x: (sx - panX) / zoom, y: (sy - panY) / zoom };
+  }
+
+  function canvasPos(e) {
+    var r = canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+
+  function resizeCanvas() {
+    var r = stage.getBoundingClientRect();
+    cssW = Math.max(1, r.width);
+    cssH = Math.max(1, r.height);
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    draw();
+  }
+
+  function wallWidth() {
+    return Math.max(5, tileSize * 0.18);
+  }
+
+  function drawMap(g, opt) {
+    var showSel = opt.showSelection;
+    var showPrev = opt.showPreview;
+    var ts = tileSize;
+    var mw = columns * ts;
+    var mh = rows * ts;
+
+    g.fillStyle = SAND;
+    g.fillRect(0, 0, mw, mh);
+
+    g.strokeStyle = GRID;
+    g.lineWidth = Math.max(1, 1 / (opt.zoom || 1));
+    g.beginPath();
+    var i;
+    for (i = 0; i <= columns; i++) {
+      g.moveTo(i * ts + 0.5, 0);
+      g.lineTo(i * ts + 0.5, mh);
+    }
+    for (i = 0; i <= rows; i++) {
+      g.moveTo(0, i * ts + 0.5);
+      g.lineTo(mw, i * ts + 0.5);
+    }
+    g.stroke();
+
+    if (flash && performance.now() < flash.until && flash.x >= 0 && flash.x < columns && flash.y >= 0 && flash.y < rows) {
+      g.fillStyle = "rgba(220,40,40,0.35)";
+      g.fillRect(flash.x * ts, flash.y * ts, ts, ts);
+    }
+
+    for (i = 0; i < items.length; i++) {
+      if (items[i].type === "wall") drawWall(g, items[i], showSel && selected[items[i].id], 1);
+    }
+    for (i = 0; i < items.length; i++) {
+      if (items[i].type !== "wall") drawTileItem(g, items[i], showSel && selected[items[i].id], 1);
+    }
+    if (showPrev && wallStrokePreview && wallStrokePreview.length) {
+      g.globalAlpha = 0.55;
+      for (i = 0; i < wallStrokePreview.length; i++) {
+        drawWall(g, wallStrokePreview[i], !placementOk(wallStrokePreview[i], null), 1);
+      }
+      g.globalAlpha = 1;
+    } else if (showPrev && hover && tool) {
+      var ok = placementOk(hover, null);
+      g.globalAlpha = 0.55;
+      if (hover.type === "wall") drawWall(g, hover, !ok, 1);
+      else drawTileItem(g, hover, !ok, 1);
+      g.globalAlpha = 1;
+    }
+  }
+
+  function drawWall(g, it, sel, alpha) {
+    var ts = tileSize;
+    var x1, y1, x2, y2;
+    if (it.orientation === "H") {
+      x1 = it.x * ts; y1 = it.y * ts;
+      x2 = (it.x + 1) * ts; y2 = y1;
+    } else {
+      x1 = it.x * ts; y1 = it.y * ts;
+      x2 = x1; y2 = (it.y + 1) * ts;
+    }
+    g.save();
+    g.globalAlpha = alpha;
+    g.strokeStyle = sel ? SELECT : WALL;
+    g.lineWidth = wallWidth() + (sel ? 3 : 0);
+    g.lineCap = "butt";
+    g.beginPath();
+    g.moveTo(x1, y1);
+    g.lineTo(x2, y2);
+    g.stroke();
+    if (sel) {
+      g.strokeStyle = WALL;
+      g.lineWidth = wallWidth();
+      g.beginPath();
+      g.moveTo(x1, y1);
+      g.lineTo(x2, y2);
+      g.stroke();
+    }
+    g.restore();
+  }
+
+  function drawTileItem(g, it, sel, alpha) {
+    var ts = tileSize;
+    var x = it.x * ts;
+    var y = it.y * ts;
+    var cx = x + ts / 2;
+    var cy = y + ts / 2;
+    g.save();
+    g.globalAlpha = alpha;
+    if (sel) {
+      g.strokeStyle = SELECT;
+      g.lineWidth = Math.max(2, ts * 0.06);
+      g.strokeRect(x + 2, y + 2, ts - 4, ts - 4);
+    }
+    if (it.type === "exit") {
+      var pad = ts * 0.12;
+      g.fillStyle = EXIT_BG;
+      g.fillRect(x + pad, y + pad * 1.3, ts - pad * 2, ts - pad * 2.6);
+      g.strokeStyle = "#7A5A00";
+      g.lineWidth = 1;
+      g.strokeRect(x + pad, y + pad * 1.3, ts - pad * 2, ts - pad * 2.6);
+      g.fillStyle = "#1A1A1A";
+      g.font = "bold " + Math.max(9, ts * 0.28) + "px sans-serif";
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      g.fillText("EXIT", cx, cy);
+    } else if (it.type === "cake") {
+      g.font = Math.max(14, ts * 0.62) + "px sans-serif";
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      g.fillText("🍰", cx, cy);
+    } else if (it.type === "mouse") {
+      g.font = Math.max(14, ts * 0.58) + "px sans-serif";
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      g.fillText("🐭", cx, cy - ts * 0.04);
+      drawArrow(g, cx, cy, it.direction || "N", ts);
+    }
+    g.restore();
+  }
+
+  function drawArrow(g, cx, cy, dir, ts) {
+    var v = DIR_VEC[dir] || DIR_VEC.N;
+    var len = ts * 0.28;
+    var ax = cx + v[0] * len;
+    var ay = cy + v[1] * len;
+    var bx = cx + v[0] * ts * 0.04;
+    var by = cy + v[1] * ts * 0.04;
+    g.strokeStyle = "#111";
+    g.fillStyle = "#FF3B30";
+    g.lineWidth = Math.max(2, ts * 0.06);
+    g.lineCap = "round";
+    g.beginPath();
+    g.moveTo(bx, by);
+    g.lineTo(ax, ay);
+    g.stroke();
+    var px = -v[1], py = v[0];
+    var hs = ts * 0.1;
+    g.beginPath();
+    g.moveTo(ax + v[0] * hs * 0.4, ay + v[1] * hs * 0.4);
+    g.lineTo(ax - px * hs - v[0] * hs * 0.2, ay - py * hs - v[1] * hs * 0.2);
+    g.lineTo(ax + px * hs - v[0] * hs * 0.2, ay + py * hs - v[1] * hs * 0.2);
+    g.closePath();
+    g.fill();
+  }
+
+  function draw() {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = "#0e0e0e";
+    ctx.fillRect(0, 0, cssW, cssH);
+    ctx.save();
+    ctx.translate(panX, panY);
+    ctx.scale(zoom, zoom);
+    drawMap(ctx, { showSelection: true, showPreview: true, zoom: zoom });
+    drawMarquee(ctx, zoom);
+    ctx.restore();
+    if (flash && performance.now() < flash.until) requestAnimationFrame(draw);
+    else flash = null;
+    updateToolButtons();
+  }
+
+  function updateToolButtons() {
+    ["wall", "mouse", "exit", "cake"].forEach(function (t) {
+      document.getElementById("tool-" + t).classList.toggle("active", tool === t);
+    });
+    document.getElementById("tool-select").classList.toggle("active", !tool);
+    ["N", "E", "S", "W"].forEach(function (d) {
+      var el = document.getElementById("dir-" + d.toLowerCase());
+      var active = mouseDir === d;
+      var selMice = getSelectedItems().filter(function (it) { return it.type === "mouse"; });
+      if (selMice.length) active = selMice.every(function (it) { return it.direction === d; });
+      el.classList.toggle("active", active);
+    });
+    canvas.classList.toggle("cross", !!tool);
+    updateRunReady();
+  }
+
+  function mapReadiness() {
+    var mice = 0, exits = 0, cakes = 0, walls = 0, i, t;
+    for (i = 0; i < items.length; i++) {
+      t = items[i].type;
+      if (t === "mouse") mice += 1;
+      else if (t === "exit") exits += 1;
+      else if (t === "cake") cakes += 1;
+      else if (t === "wall") walls += 1;
+    }
+    return {
+      mice: mice,
+      exits: exits,
+      cakes: cakes,
+      walls: walls,
+      ok: mice >= 1 && exits >= 1
+    };
+  }
+
+  function updateRunReady() {
+    var r = mapReadiness();
+    var el = document.getElementById("run-ready");
+    var missing = [];
+    if (r.mice < 1) missing.push("mouse");
+    if (r.exits < 1) missing.push("EXIT");
+    el.classList.toggle("ok", r.ok);
+    el.classList.toggle("no", !r.ok);
+    el.textContent = r.ok ? "Ready for Lab" : ("Need " + missing.join(" + "));
+    fillGuideCheck(r);
+  }
+
+  function fillGuideCheck(r) {
+    var el = document.getElementById("guide-check");
+    if (!el) return;
+    r = r || mapReadiness();
+    function row(ok, opt, label) {
+      var cls = ok ? "ok" : (opt ? "opt" : "no");
+      var mark = ok ? "✓" : (opt ? "·" : "✗");
+      return "<li><span class=\"mark " + cls + "\">" + mark + "</span><span>" + label + "</span></li>";
+    }
+    el.innerHTML =
+      row(r.mice >= 1, false, r.mice >= 1 ? ("Mouse placed (" + r.mice + ")" + (r.mice > 1 ? "; run uses the first" : "")) : "No mouse (required)") +
+      row(r.exits >= 1, false, r.exits >= 1 ? ("EXIT placed (" + r.exits + ")" + (r.exits > 1 ? "; run uses the first" : "")) : "No EXIT (required)") +
+      row(r.cakes > 0, true, r.cakes > 0 ? (r.cakes + " cake(s) (optional)") : "No cakes (optional)") +
+      row(r.walls > 0, true, r.walls > 0 ? (r.walls + " wall segment(s) (optional)") : "No walls (optional; recommended for a maze)");
+  }
+
+  function isGuideOpen() {
+    return appEl.classList.contains("guide-open");
+  }
+
+  function openGuide() {
+    fillGuideCheck();
+    appEl.classList.add("guide-open");
+  }
+
+  function closeGuide(remember) {
+    appEl.classList.remove("guide-open");
+    if (remember) {
+      try { localStorage.setItem(GUIDE_KEY, "1"); } catch (err) {}
+    }
+  }
+
+  function maybeShowFirstGuide() {
+    try {
+      if (!localStorage.getItem(GUIDE_KEY)) openGuide();
+    } catch (err) {
+      openGuide();
+    }
+  }
+
+  function setTool(t) {
+    if (t === "select") {
+      if (tool) lastTool = tool;
+      tool = null;
+      hover = null;
+      setStatus(toolStatus());
+      draw();
+      return;
+    }
+    tool = t;
+    if (t) lastTool = t;
+    clearSelected();
+    if (t === "wall") wallLock = null;
+    setStatus(toolStatus());
+    draw();
+  }
+
+  function cancelTool() {
+    if (ptr && ptr.mode === "drawWall") {
+      wallStrokePreview = null;
+      try { canvas.releasePointerCapture(ptr.id); } catch (err) {}
+      ptr = null;
+      canvas.classList.remove("grabbing");
+      hover = null;
+      setStatus("Wall stroke cancelled");
+      draw();
+      return;
+    }
+    if (ptr && ptr.mode === "marquee") {
+      if (ptr.sel0) selected = ptr.sel0;
+      try { canvas.releasePointerCapture(ptr.id); } catch (err) {}
+      ptr = null;
+      hover = null;
+      setStatus(toolStatus());
+      draw();
+      return;
+    }
+    if (tool) lastTool = tool;
+    tool = null;
+    hover = null;
+    wallStrokePreview = null;
+    setStatus("Placement cancelled");
+    draw();
+  }
+
+  function restoreLastTool() {
+    if (!lastTool) {
+      setStatus("No last tool");
+      return;
+    }
+    setTool(lastTool);
+  }
+
+  function zoomAt(sx, sy, factor) {
+    var w = screenToWorld(sx, sy);
+    zoom = clamp(zoom * factor, 0.05, 8);
+    panX = sx - w.x * zoom;
+    panY = sy - w.y * zoom;
+    draw();
+  }
+
+  function fitRect(minX, minY, maxX, maxY) {
+    var pad = 18;
+    var bw = Math.max(1, maxX - minX);
+    var bh = Math.max(1, maxY - minY);
+    zoom = clamp(Math.min((cssW - pad * 2) / bw, (cssH - pad * 2) / bh), 0.05, 8);
+    panX = (cssW - bw * zoom) / 2 - minX * zoom;
+    panY = (cssH - bh * zoom) / 2 - minY * zoom;
+    draw();
+  }
+
+  function fitScreen() {
+    fitRect(0, 0, columns * tileSize, rows * tileSize);
+  }
+
+  function creationBounds() {
+    if (!items.length) return null;
+    var ts = tileSize;
+    var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    items.forEach(function (it) {
+      if (it.type === "wall") {
+        if (it.orientation === "H") {
+          minX = Math.min(minX, it.x * ts);
+          maxX = Math.max(maxX, (it.x + 1) * ts);
+          minY = Math.min(minY, it.y * ts - 4);
+          maxY = Math.max(maxY, it.y * ts + 4);
+        } else {
+          minX = Math.min(minX, it.x * ts - 4);
+          maxX = Math.max(maxX, it.x * ts + 4);
+          minY = Math.min(minY, it.y * ts);
+          maxY = Math.max(maxY, (it.y + 1) * ts);
+        }
+      } else {
+        minX = Math.min(minX, it.x * ts);
+        maxX = Math.max(maxX, (it.x + 1) * ts);
+        minY = Math.min(minY, it.y * ts);
+        maxY = Math.max(maxY, (it.y + 1) * ts);
+      }
+    });
+    return { minX: minX, minY: minY, maxX: maxX, maxY: maxY };
+  }
+
+  function fitCreation() {
+    var b = creationBounds();
+    if (!b) {
+      fitScreen();
+      return;
+    }
+    var pad = tileSize * 0.6;
+    fitRect(b.minX - pad, b.minY - pad, b.maxX + pad, b.maxY + pad);
+  }
+
+  function tryShiftItems(src, cols, rws) {
+    var dxMin = -MAX_SIZE, dxMax = MAX_SIZE, dyMin = -MAX_SIZE, dyMax = MAX_SIZE;
+    var i, it;
+    if (!src.length) return src.map(clone);
+    for (i = 0; i < src.length; i++) {
+      it = src[i];
+      if (it.type === "wall" && it.orientation === "H") {
+        dxMin = Math.max(dxMin, -it.x);
+        dxMax = Math.min(dxMax, cols - 1 - it.x);
+        dyMin = Math.max(dyMin, -it.y);
+        dyMax = Math.min(dyMax, rws - it.y);
+      } else if (it.type === "wall" && it.orientation === "V") {
+        dxMin = Math.max(dxMin, -it.x);
+        dxMax = Math.min(dxMax, cols - it.x);
+        dyMin = Math.max(dyMin, -it.y);
+        dyMax = Math.min(dyMax, rws - 1 - it.y);
+      } else {
+        dxMin = Math.max(dxMin, -it.x);
+        dxMax = Math.min(dxMax, cols - 1 - it.x);
+        dyMin = Math.max(dyMin, -it.y);
+        dyMax = Math.min(dyMax, rws - 1 - it.y);
+      }
+    }
+    if (dxMin > dxMax || dyMin > dyMax) return null;
+    var dx = clamp(0, dxMin, dxMax);
+    var dy = clamp(0, dyMin, dyMax);
+    return src.map(function (s) {
+      var n = clone(s);
+      n.x += dx;
+      n.y += dy;
+      return n;
+    });
+  }
+
+  function applyMapSize() {
+    var cols = Math.round(Number(inpCols.value));
+    var rws = Math.round(Number(inpRows.value));
+    if (!Number.isFinite(cols) || !Number.isFinite(rws)) {
+      inpCols.value = columns;
+      inpRows.value = rows;
+      setStatus("Invalid map size");
+      return;
+    }
+    cols = clamp(cols, MIN_SIZE, MAX_SIZE);
+    rws = clamp(rws, MIN_SIZE, MAX_SIZE);
+    inpCols.value = cols;
+    inpRows.value = rws;
+    if (cols === columns && rws === rows) return;
+    var shifted = tryShiftItems(items, cols, rws);
+    if (!shifted) {
+      inpCols.value = columns;
+      inpRows.value = rows;
+      setStatus("Map too small for current creation");
+      return;
+    }
+    columns = cols;
+    rows = rws;
+    items = shifted;
+    fitCreation();
+    setStatus("Map size " + columns + " × " + rows);
+  }
+
+  function applyTileSize() {
+    var ns = Math.round(Number(inpTile.value));
+    if (!Number.isFinite(ns)) {
+      inpTile.value = tileSize;
+      return;
+    }
+    ns = clamp(ns, MIN_TILE, MAX_TILE);
+    inpTile.value = ns;
+    if (ns === tileSize) return;
+    var cx = cssW / 2, cy = cssH / 2;
+    var wx = (cx - panX) / zoom / tileSize;
+    var wy = (cy - panY) / zoom / tileSize;
+    tileSize = ns;
+    panX = cx - wx * tileSize * zoom;
+    panY = cy - wy * tileSize * zoom;
+    draw();
+  }
+
+  function deleteSelected() {
+    if (!selectedCount()) {
+      setStatus("Nothing selected");
+      return;
+    }
+    items = items.filter(function (it) { return !selected[it.id]; });
+    clearSelected();
+    setStatus("Item deleted");
+    draw();
+  }
+
+  function deleteAt(wx, wy) {
+    var hit = hitTest(wx, wy);
+    if (!hit) return;
+    items = items.filter(function (it) { return it.id !== hit.id; });
+    delete selected[hit.id];
+    setStatus("Item deleted");
+    draw();
+  }
+
+  function rotateSelectedOrTool() {
+    if (tool === "wall") {
+      wallLock = wallLock === "H" ? "V" : wallLock === "V" ? "H" : (hover && hover.orientation === "H" ? "V" : "H");
+      if (ptr) {
+        var w = screenToWorld(ptr.sx, ptr.sy);
+        hover = snapPreview(w.x, w.y);
+        if (ptr.mode === "drawWall") {
+          var cur = screenToWorld(ptr.lastX, ptr.lastY);
+          wallStrokePreview = wallStrokeFromDrag(ptr.startW, cur, ptr.lastX - ptr.sx, ptr.lastY - ptr.sy);
+        }
+      }
+      setStatus("Wall " + (wallLock || "auto"));
+      draw();
+      return;
+    }
+    if (tool === "mouse") {
+      cycleMouseDir(1);
+      return;
+    }
+    var list = getSelectedItems();
+    if (!list.length) return;
+    var i, it, next, nx, ny, ori;
+    for (i = 0; i < list.length; i++) {
+      it = list[i];
+      if (it.type === "mouse") {
+        it.direction = DIRS[(DIRS.indexOf(it.direction) + 1) % 4];
+      } else if (it.type === "wall") {
+        ori = it.orientation === "H" ? "V" : "H";
+        nx = it.x;
+        ny = it.y;
+        next = { type: "wall", x: nx, y: ny, orientation: ori };
+        if (!itemValid(next) || existingWall(ori, nx, ny, it.id)) {
+          if (it.orientation === "H") next.x = clamp(it.x, 0, columns);
+          else next.y = clamp(it.y, 0, rows);
+        }
+        if (itemValid(next) && !existingWall(next.orientation, next.x, next.y, it.id)) {
+          it.orientation = next.orientation;
+          it.x = next.x;
+          it.y = next.y;
+        } else {
+          setStatus("Wall already exists");
+        }
+      }
+    }
+    setStatus(toolStatus());
+    draw();
+  }
+
+  function cycleMouseDir(step) {
+    mouseDir = DIRS[(DIRS.indexOf(mouseDir) + step + 4) % 4];
+    getSelectedItems().forEach(function (it) {
+      if (it.type === "mouse") it.direction = mouseDir;
+    });
+    setStatus("Mouse facing " + DIR_NAME[mouseDir]);
+    draw();
+  }
+
+  function setMouseDir(dir) {
+    mouseDir = dir;
+    getSelectedItems().forEach(function (it) {
+      if (it.type === "mouse") it.direction = dir;
+    });
+    setStatus("Mouse facing " + DIR_NAME[dir]);
+    draw();
+  }
+
+  function selectAll() {
+    selected = {};
+    items.forEach(function (it) { selected[it.id] = true; });
+    tool = null;
+    hover = null;
+    setStatus(items.length ? "All creation selected" : "Nothing to select");
+    draw();
+  }
+
+  function groupMove(ids, dx, dy) {
+    var moving = items.filter(function (it) { return ids[it.id]; });
+    var others = items.filter(function (it) { return !ids[it.id]; });
+    var next = moving.map(function (it) {
+      var n = clone(it);
+      n.x += dx;
+      n.y += dy;
+      return n;
+    });
+    var i, j, a, b;
+    for (i = 0; i < next.length; i++) {
+      if (!itemValid(next[i])) return "bounds";
+    }
+    var tiles = {};
+    for (i = 0; i < others.length; i++) {
+      if (others[i].type !== "wall") tiles[tileKey(others[i].x, others[i].y)] = true;
+    }
+    for (i = 0; i < next.length; i++) {
+      a = next[i];
+      if (a.type === "wall") {
+        for (j = 0; j < others.length; j++) {
+          if (sameWall(a, others[j])) return "wall";
+        }
+        for (j = i + 1; j < next.length; j++) {
+          if (sameWall(a, next[j])) return "wall";
+        }
+      } else {
+        var k = tileKey(a.x, a.y);
+        if (tiles[k]) return "occupied";
+        tiles[k] = true;
+      }
+    }
+    var byId = {};
+    next.forEach(function (n) { byId[n.id] = n; });
+    items = items.map(function (it) { return byId[it.id] || it; });
+    return "ok";
+  }
+
+  function onPointerDown(e) {
+    if (e.button === 2) {
+      e.preventDefault();
+      var rp = canvasPos(e);
+      var rw = screenToWorld(rp.x, rp.y);
+      deleteAt(rw.x, rw.y);
+      return;
+    }
+    var panNow = panModifierOn() || e.shiftKey || e.button === 1;
+    if (e.button === 1) e.preventDefault();
+    if (!panNow && e.button !== 0 && e.pointerType === "mouse") return;
+    var p = canvasPos(e);
+    var w = screenToWorld(p.x, p.y);
+    canvas.setPointerCapture(e.pointerId);
+    ptr = {
+      id: e.pointerId,
+      sx: p.x,
+      sy: p.y,
+      wx: w.x,
+      wy: w.y,
+      lastX: p.x,
+      lastY: p.y,
+      moved: panNow,
+      mode: panNow ? "pan" : "maybe",
+      hit: panNow ? null : hitTest(w.x, w.y),
+      orig: null,
+      pan0x: panX,
+      pan0y: panY,
+      startW: { x: w.x, y: w.y }
+    };
+    if (ptr.mode === "pan") canvas.classList.add("grabbing");
+  }
+
+  function onPointerMove(e) {
+    var p = canvasPos(e);
+    var w = screenToWorld(p.x, p.y);
+    if (!ptr || ptr.id !== e.pointerId) {
+      hover = snapPreview(w.x, w.y);
+      draw();
+      return;
+    }
+    ptr.lastX = p.x;
+    ptr.lastY = p.y;
+    var dist = Math.hypot(p.x - ptr.sx, p.y - ptr.sy);
+    if (!ptr.moved && dist > 8) {
+      ptr.moved = true;
+      if (tool === "wall") {
+        ptr.mode = "drawWall";
+      } else if (ptr.hit) {
+        if (!selected[ptr.hit.id]) {
+          selectItem(ptr.hit, true);
+          if (tool) lastTool = tool;
+          tool = null;
+        }
+        ptr.mode = "move";
+        ptr.orig = items.map(clone);
+        ptr.lastValid = items.map(clone);
+        ptr.ids = {};
+        getSelectedItems().forEach(function (it) { ptr.ids[it.id] = true; });
+        if (!ptr.ids[ptr.hit.id]) {
+          selectItem(ptr.hit, true);
+          ptr.ids[ptr.hit.id] = true;
+        }
+      } else if (items.length && selectedCount() === items.length && tileAt(ptr.wx, ptr.wy)) {
+        ptr.mode = "move";
+        ptr.orig = items.map(clone);
+        ptr.lastValid = items.map(clone);
+        ptr.ids = {};
+        items.forEach(function (it) { ptr.ids[it.id] = true; });
+      } else if (!tool) {
+        ptr.mode = "marquee";
+        ptr.sel0 = copySelected();
+      } else {
+        ptr.mode = "pan";
+        canvas.classList.add("grabbing");
+      }
+    }
+    if (ptr.mode === "drawWall") {
+      wallStrokePreview = wallStrokeFromDrag(ptr.startW, w, p.x - ptr.sx, p.y - ptr.sy);
+      hover = wallStrokePreview.length ? wallStrokePreview[wallStrokePreview.length - 1] : snapWall(w.x, w.y);
+      setStatus(wallStrokePreview.length ? ("Wall × " + wallStrokePreview.length) : toolStatus());
+      draw();
+      return;
+    }
+    if (ptr.mode === "pan") {
+      panX = ptr.pan0x + (p.x - ptr.sx);
+      panY = ptr.pan0y + (p.y - ptr.sy);
+      hover = null;
+      draw();
+      return;
+    }
+    if (ptr.mode === "marquee") {
+      hover = null;
+      applyMarqueeSelection(marqueeRect(ptr.wx, ptr.wy, w.x, w.y));
+      draw();
+      return;
+    }
+    if (ptr.mode === "move") {
+      var dx = Math.round((w.x - ptr.wx) / tileSize);
+      var dy = Math.round((w.y - ptr.wy) / tileSize);
+      items = ptr.orig.map(clone);
+      if (dx !== 0 || dy !== 0) {
+        var moved = groupMove(ptr.ids, dx, dy);
+        if (moved === "ok") {
+          ptr.lastValid = items.map(clone);
+        } else {
+          items = (ptr.lastValid || ptr.orig).map(clone);
+          if (moved === "bounds") setStatus("Cannot move outside map");
+          else if (moved === "wall") setStatus("Wall already exists");
+          else setStatus("Tile occupied");
+        }
+      }
+      draw();
+      return;
+    }
+    hover = snapPreview(w.x, w.y);
+    draw();
+  }
+
+  function onPointerUp(e) {
+    if (!ptr || ptr.id !== e.pointerId) return;
+    var p = canvasPos(e);
+    var w = screenToWorld(p.x, p.y);
+    canvas.classList.remove("grabbing");
+    try { canvas.releasePointerCapture(e.pointerId); } catch (err) {}
+    if (ptr.mode === "drawWall") {
+      var segs = wallStrokeFromDrag(ptr.startW, w, p.x - ptr.sx, p.y - ptr.sy);
+      if (!segs.length) placePreview(snapPreview(ptr.wx, ptr.wy));
+      else placeWallStroke(segs);
+    } else if (ptr.mode === "marquee") {
+      applyMarqueeSelection(marqueeRect(ptr.wx, ptr.wy, w.x, w.y));
+      var mice = getSelectedItems().filter(function (it) { return it.type === "mouse"; });
+      if (mice.length === 1) mouseDir = mice[0].direction;
+      setStatus(toolStatus());
+    } else if (!ptr.moved) {
+      if (tool) {
+        hover = snapPreview(w.x, w.y);
+        placePreview(hover);
+      } else if (ptr.hit) {
+        if (tool) lastTool = tool;
+        tool = null;
+        toggleSelect(ptr.hit);
+        if (ptr.hit.type === "mouse" && selected[ptr.hit.id]) mouseDir = ptr.hit.direction;
+        setStatus(toolStatus());
+      } else {
+        clearSelected();
+        var now = performance.now();
+        if (now - lastTap.t < 420 && Math.hypot(p.x - lastTap.x, p.y - lastTap.y) < 28) {
+          restoreLastTool();
+        } else {
+          setStatus(toolStatus());
+        }
+        lastTap = { t: now, x: p.x, y: p.y };
+      }
+    }
+    wallStrokePreview = null;
+    ptr = null;
+    hover = snapPreview(w.x, w.y);
+    draw();
+  }
+
+  function onPointerCancel(e) {
+    if (!ptr || ptr.id !== e.pointerId) return;
+    if (ptr.mode === "move" && ptr.orig) items = ptr.orig.map(clone);
+    if (ptr.mode === "marquee" && ptr.sel0) selected = ptr.sel0;
+    wallStrokePreview = null;
+    ptr = null;
+    canvas.classList.remove("grabbing");
+    draw();
+  }
+
+  function onWheel(e) {
+    e.preventDefault();
+    var p = canvasPos(e);
+    var factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+    zoomAt(p.x, p.y, factor);
+  }
+
+  function isTyping(el) {
+    return el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA");
+  }
+
+  function onKeyDown(e) {
+    if (isTyping(document.activeElement)) {
+      if (e.key === "Enter" && (document.activeElement === inpCols || document.activeElement === inpRows)) {
+        e.preventDefault();
+        applyMapSize();
+      }
+      if (e.key === "Enter" && document.activeElement === inpTile) {
+        e.preventDefault();
+        applyTileSize();
+      }
+      return;
+    }
+    if (isGuideOpen()) {
+      e.preventDefault();
+      closeGuide(false);
+      return;
+    }
+    if (e.code === "Space" || e.key === " ") {
+      e.preventDefault();
+      setSpaceHeld(true);
+      return;
+    }
+    if (e.key === "Shift") {
+      setShiftHeld(true);
+      return;
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      cancelTool();
+      return;
+    }
+    if (e.key === "1") { setTool("wall"); return; }
+    if (e.key === "2") { setTool("mouse"); return; }
+    if (e.key === "3") { setTool("exit"); return; }
+    if (e.key === "4") { setTool("cake"); return; }
+    if (e.key === "5") { setTool("select"); return; }
+    if (e.key === "Delete" || e.key === "Backspace") {
+      e.preventDefault();
+      deleteSelected();
+      return;
+    }
+    if (e.key === "r" || e.key === "R") {
+      e.preventDefault();
+      rotateSelectedOrTool();
+      return;
+    }
+    if (e.key === "ArrowUp") { e.preventDefault(); setMouseDir("N"); return; }
+    if (e.key === "ArrowRight") { e.preventDefault(); setMouseDir("E"); return; }
+    if (e.key === "ArrowDown") { e.preventDefault(); setMouseDir("S"); return; }
+    if (e.key === "ArrowLeft") { e.preventDefault(); setMouseDir("W"); return; }
+  }
+
+  function buildJSON() {
+    return {
+      format: "ACT_MAP_CREATOR",
+      version: 1,
+      createdBy: AI_NAME,
+      notes: {
+        coordinates: "Top-left tile is (0,0). X increases right. Y increases down.",
+        walls: "A wall's x,y is its start grid intersection. orientation H extends to (x+1,y). orientation V extends to (x,y+1). Walls lie on grid lines and do not occupy tile interiors."
+      },
+      map: {
+        columns: columns,
+        rows: rows,
+        tileSize: tileSize
+      },
+      items: items.map(function (it) {
+        if (it.type === "mouse") return { type: "mouse", x: it.x, y: it.y, direction: it.direction };
+        if (it.type === "exit") return { type: "exit", x: it.x, y: it.y };
+        if (it.type === "cake") return { type: "cake", x: it.x, y: it.y };
+        return { type: "wall", x: it.x, y: it.y, orientation: it.orientation };
+      })
+    };
+  }
+
+  function downloadBlob(name, blob) {
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () {
+      URL.revokeObjectURL(a.href);
+      a.remove();
+    }, 400);
+  }
+
+  function saveJSON() {
+    var text = JSON.stringify(buildJSON(), null, 2);
+    downloadBlob(FILE_BASE + ".json", new Blob([text], { type: "application/json" }));
+    setStatus("JSON saved");
+  }
+
+  function savePNG() {
+    var w = columns * tileSize;
+    var h = rows * tileSize;
+    if (w < 1 || h < 1) {
+      setStatus("Cannot export empty map");
+      return;
+    }
+    if (w * h > 16000000) {
+      setStatus("PNG too large; reduce tile size");
+      return;
+    }
+    var off = document.createElement("canvas");
+    off.width = w;
+    off.height = h;
+    var g = off.getContext("2d");
+    if (!g) {
+      setStatus("PNG export failed");
+      return;
+    }
+    drawMap(g, { showSelection: false, showPreview: false, zoom: 1 });
+    try {
+      off.toBlob(function (blob) {
+        if (!blob) {
+          setStatus("PNG export failed");
+          return;
+        }
+        downloadBlob(FILE_BASE + ".png", blob);
+        setStatus("PNG saved");
+      }, "image/png");
+    } catch (err) {
+      setStatus("PNG export failed");
+    }
+  }
+
+  function parseLoadedItems(raw, cols, rws) {
+    if (!Array.isArray(raw)) return { error: "Invalid JSON" };
+    var out = [];
+    var tiles = {};
+    var walls = {};
+    var i, it, x, y, ori, dir, type, obj, k;
+    for (i = 0; i < raw.length; i++) {
+      it = raw[i];
+      if (!it || typeof it !== "object") return { error: "Invalid JSON" };
+      type = it.type;
+      x = it.x;
+      y = it.y;
+      if (typeof x !== "number" || typeof y !== "number" || !Number.isInteger(x) || !Number.isInteger(y)) {
+        return { error: "Invalid JSON" };
+      }
+      if (type === "wall") {
+        ori = it.orientation;
+        if (ori !== "H" && ori !== "V") return { error: "Invalid JSON" };
+        if (!wallValid(x, y, ori, cols, rws)) return { error: "Invalid JSON" };
+        k = ori + ":" + x + "," + y;
+        if (walls[k]) return { error: "Invalid JSON" };
+        walls[k] = true;
+        out.push({ id: nextId++, type: "wall", x: x, y: y, orientation: ori });
+      } else if (type === "mouse" || type === "exit" || type === "cake") {
+        if (!tileValid(x, y, cols, rws)) return { error: "Invalid JSON" };
+        k = tileKey(x, y);
+        if (tiles[k]) return { error: "Invalid JSON" };
+        tiles[k] = true;
+        obj = { id: nextId++, type: type, x: x, y: y };
+        if (type === "mouse") {
+          dir = it.direction;
+          if (DIRS.indexOf(dir) < 0) return { error: "Invalid JSON" };
+          obj.direction = dir;
+        }
+        out.push(obj);
+      } else {
+        return { error: "Invalid JSON" };
+      }
+    }
+    return { items: out };
+  }
+
+  function loadJSONText(text) {
+    var data;
+    try { data = JSON.parse(text); }
+    catch (err) {
+      setStatus("Invalid JSON");
+      return;
+    }
+    if (!data || data.format !== "ACT_MAP_CREATOR" || data.version !== 1 || !data.map) {
+      setStatus("Invalid JSON");
+      return;
+    }
+    var cols = data.map.columns;
+    var rws = data.map.rows;
+    var ts = data.map.tileSize;
+    if (![cols, rws, ts].every(function (n) { return typeof n === "number" && Number.isInteger(n); })) {
+      setStatus("Invalid JSON");
+      return;
+    }
+    if (cols < MIN_SIZE || cols > MAX_SIZE || rws < MIN_SIZE || rws > MAX_SIZE || ts < MIN_TILE || ts > MAX_TILE) {
+      setStatus("Invalid JSON");
+      return;
+    }
+    var keepId = nextId;
+    var parsed = parseLoadedItems(data.items || [], cols, rws);
+    if (parsed.error) {
+      nextId = keepId;
+      setStatus("Invalid JSON");
+      return;
+    }
+    columns = cols;
+    rows = rws;
+    tileSize = ts;
+    items = parsed.items;
+    clearSelected();
+    tool = null;
+    hover = null;
+    inpCols.value = columns;
+    inpRows.value = rows;
+    inpTile.value = tileSize;
+    fitScreen();
+    setStatus("JSON loaded");
+  }
+
+  function bind() {
+    document.querySelectorAll(".preset").forEach(function (btn) {
+      btn.addEventListener("click", function () { setTool(btn.getAttribute("data-tool")); });
+    });
+    document.getElementById("btn-cancel").addEventListener("click", cancelTool);
+    document.getElementById("btn-last").addEventListener("click", restoreLastTool);
+    document.getElementById("btn-guide").addEventListener("click", function () { openGuide(); });
+    document.getElementById("btn-guide-ok").addEventListener("click", function () { closeGuide(true); });
+    document.getElementById("btn-guide-later").addEventListener("click", function () { closeGuide(false); });
+    document.getElementById("guide-mask").addEventListener("click", function (e) {
+      if (e.target === document.getElementById("guide-mask")) closeGuide(false);
+    });
+    document.getElementById("btn-apply-size").addEventListener("click", applyMapSize);
+    document.getElementById("btn-fit-screen").addEventListener("click", fitScreen);
+    document.getElementById("btn-fit-creation").addEventListener("click", fitCreation);
+    document.getElementById("btn-select-all").addEventListener("click", selectAll);
+    document.getElementById("btn-delete").addEventListener("click", deleteSelected);
+    document.getElementById("btn-rotate").addEventListener("click", rotateSelectedOrTool);
+    document.getElementById("btn-zoom-in").addEventListener("click", function () { zoomAt(cssW / 2, cssH / 2, 1.2); });
+    document.getElementById("btn-zoom-out").addEventListener("click", function () { zoomAt(cssW / 2, cssH / 2, 1 / 1.2); });
+    document.getElementById("btn-png").addEventListener("click", savePNG);
+    document.getElementById("btn-json").addEventListener("click", saveJSON);
+    document.getElementById("btn-load").addEventListener("click", function () { fileInput.click(); });
+    fileInput.addEventListener("change", function () {
+      var f = fileInput.files && fileInput.files[0];
+      fileInput.value = "";
+      if (!f) return;
+      var reader = new FileReader();
+      reader.onload = function () { loadJSONText(String(reader.result || "")); };
+      reader.onerror = function () { setStatus("Invalid JSON"); };
+      reader.readAsText(f);
+    });
+    inpTile.addEventListener("change", applyTileSize);
+    ["n", "e", "s", "w"].forEach(function (d) {
+      document.getElementById("dir-" + d).addEventListener("click", function () {
+        setMouseDir(d.toUpperCase());
+      });
+    });
+
+    canvas.addEventListener("pointerdown", onPointerDown);
+    canvas.addEventListener("pointermove", onPointerMove);
+    canvas.addEventListener("pointerup", onPointerUp);
+    canvas.addEventListener("pointercancel", onPointerCancel);
+    canvas.addEventListener("wheel", onWheel, { passive: false });
+    canvas.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+    canvas.addEventListener("dblclick", function (e) { e.preventDefault(); });
+    canvas.addEventListener("mousedown", function (e) {
+      if (e.button === 1) e.preventDefault();
+    });
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", function (e) {
+      if (e.code === "Space" || e.key === " ") {
+        e.preventDefault();
+        setSpaceHeld(false);
+      }
+      if (e.key === "Shift") setShiftHeld(false);
+    });
+    window.addEventListener("blur", function () {
+      setSpaceHeld(false);
+      setShiftHeld(false);
+    });
+    window.addEventListener("resize", resizeCanvas);
+
+    document.addEventListener("gesturestart", function (e) { e.preventDefault(); });
+    document.addEventListener("gesturechange", function (e) { e.preventDefault(); });
+  }
+
+  bind();
+  resizeCanvas();
+  fitScreen();
+  setStatus("Ready");
+  maybeShowFirstGuide();
+})();
+</script>
+</body>
+</html>

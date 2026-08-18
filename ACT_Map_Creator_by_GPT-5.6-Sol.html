@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<title>ACT Map Creator by GPT-5.6-Sol</title>
+<style>
+:root{
+  --bg:#1f2328;
+  --panel:#2b3138;
+  --panel2:#343b44;
+  --text:#f5f7fa;
+  --muted:#aeb7c2;
+  --accent:#f0c36b;
+  --danger:#d94f4f;
+  --button:#48515d;
+  --buttonActive:#697586;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;touch-action:none}
+button,input,select{font:inherit}
+button{border:0;border-radius:10px;background:var(--button);color:var(--text);padding:10px 12px;min-height:44px;cursor:pointer}
+button:hover{filter:brightness(1.08)}
+button.active{background:var(--buttonActive);outline:2px solid var(--accent)}
+button.warn{background:#725151}
+.app{height:100dvh;display:grid;grid-template-rows:auto auto 1fr;min-height:0}
+.topbar{
+  display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--panel);
+  border-bottom:1px solid #0006;overflow-x:auto;overscroll-behavior-x:contain;
+}
+.brand{font-weight:800;white-space:nowrap;margin-right:4px}
+.creator{font-size:12px;color:var(--muted);white-space:nowrap;margin-right:8px}
+.toolBtn{display:flex;align-items:center;gap:7px;white-space:nowrap}
+.keycap{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 5px;border-radius:6px;background:#1118;font-size:12px;font-weight:700}
+.toolbarIcon{font-size:20px;line-height:1}
+.settings{
+  display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--panel2);
+  border-bottom:1px solid #0006;overflow-x:auto;overscroll-behavior-x:contain;
+}
+.group{display:flex;align-items:center;gap:6px;white-space:nowrap}
+label{font-size:13px;color:var(--muted)}
+input[type=number]{width:72px}
+input[type=color]{width:44px;padding:2px;height:40px}
+input,select{
+  background:#171b20;color:var(--text);border:1px solid #58606a;border-radius:8px;
+  min-height:40px;padding:6px 8px;
+}
+.spacer{flex:1}
+.stageWrap{position:relative;min-height:0;overflow:hidden;background:#20262c}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.zoomControls{
+  position:absolute;right:max(12px,env(safe-area-inset-right));top:12px;
+  display:grid;gap:8px;z-index:10
+}
+.zoomControls button{width:48px;height:48px;font-size:24px;font-weight:800;padding:0}
+.status{
+  position:absolute;left:12px;bottom:max(12px,env(safe-area-inset-bottom));
+  background:#111c;border:1px solid #ffffff1a;border-radius:10px;padding:8px 10px;
+  font-size:12px;color:#e6ebf0;max-width:min(72vw,520px);pointer-events:none;z-index:9
+}
+.floatingActions{
+  position:absolute;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));
+  display:flex;gap:8px;z-index:9
+}
+.selectionBox{
+  position:absolute;border:2px dashed #fff9;background:#fff1;display:none;pointer-events:none;z-index:8
+}
+.hiddenFile{display:none}
+@media(max-width:760px){
+  .app{grid-template-rows:auto auto 1fr}
+  .topbar,.settings{padding:6px}
+  .brand{font-size:14px}
+  .creator{display:none}
+  button{padding:9px 10px}
+  .toolBtn .toolLabel{display:none}
+  .settings .group label{display:none}
+  .settings input[type=number]{width:64px}
+  .status{font-size:11px;max-width:65vw}
+}
+@media(orientation:portrait) and (max-width:900px){
+  .floatingActions{left:12px;right:auto}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar" id="topbar">
+    <div class="brand">ACT Map Creator</div>
+    <div class="creator">Created By GPT-5.6 Sol</div>
+    <button class="toolBtn" data-tool="wall" title="Wall (1)">
+      <span class="keycap">1</span><span class="toolbarIcon">▰</span><span class="toolLabel">Wall</span>
+    </button>
+    <button class="toolBtn" data-tool="mouse" title="Mouse Agent (2)">
+      <span class="keycap">2</span><span class="toolbarIcon">🐭</span><span class="toolLabel">Mouse</span>
+    </button>
+    <button class="toolBtn" data-tool="exit" title="Exit (3)">
+      <span class="keycap">3</span><span class="toolbarIcon">🚪</span><span class="toolLabel">EXIT</span>
+    </button>
+    <button class="toolBtn" data-tool="cake" title="Cake Reward (4)">
+      <span class="keycap">4</span><span class="toolbarIcon">🍰</span><span class="toolLabel">Cake</span>
+    </button>
+    <button id="selectAllBtn" title="Select all placed items">Select All</button>
+    <button id="deleteBtn" class="warn" title="Delete selected item(s)">Delete</button>
+  </div>
+
+  <div class="settings">
+    <div class="group"><label>Cols</label><input id="cols" type="number" min="1" max="200" value="20"></div>
+    <div class="group"><label>Rows</label><input id="rows" type="number" min="1" max="200" value="12"></div>
+    <div class="group"><label>Tile px</label><input id="tileSize" type="number" min="8" max="160" value="40"></div>
+    <div class="group"><label>Ground</label><input id="groundColor" type="color" value="#d8c49a"></div>
+    <div class="group"><label>Grid</label><input id="gridColor" type="color" value="#111111"></div>
+    <div class="group"><label>Wall</label><input id="wallColor" type="color" value="#8b5a2b"></div>
+    <button id="fitBtn">Fit Creation</button>
+    <button id="exportPngBtn">Save PNG</button>
+    <button id="exportJsonBtn">Save JSON</button>
+    <button id="importJsonBtn">Load JSON</button>
+    <input id="jsonFileInput" class="hiddenFile" type="file" accept=".json,application/json">
+    <div class="spacer"></div>
+    <button id="resetViewBtn">Reset View</button>
+  </div>
+
+  <div class="stageWrap" id="stageWrap">
+    <canvas id="mapCanvas"></canvas>
+    <div class="selectionBox" id="selectionBox"></div>
+    <div class="zoomControls">
+      <button id="zoomInBtn" aria-label="Zoom in">+</button>
+      <button id="zoomOutBtn" aria-label="Zoom out">−</button>
+    </div>
+    <div class="status" id="status">Ready. 1 Wall · 2 Mouse · 3 EXIT · 4 Cake · Esc cancel.</div>
+    <div class="floatingActions">
+      <button id="rotateBtn">Rotate</button>
+      <button id="cancelBtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const canvas = document.getElementById('mapCanvas');
+  const ctx = canvas.getContext('2d');
+  const stageWrap = document.getElementById('stageWrap');
+  const statusEl = document.getElementById('status');
+  const selectionBoxEl = document.getElementById('selectionBox');
+
+  const controls = {
+    cols: document.getElementById('cols'),
+    rows: document.getElementById('rows'),
+    tileSize: document.getElementById('tileSize'),
+    groundColor: document.getElementById('groundColor'),
+    gridColor: document.getElementById('gridColor'),
+    wallColor: document.getElementById('wallColor'),
+  };
+
+  const state = {
+    cols: 20,
+    rows: 12,
+    tileSize: 40,
+    groundColor: '#d8c49a',
+    gridColor: '#111111',
+    wallColor: '#8b5a2b',
+    scale: 1,
+    offsetX: 40,
+    offsetY: 40,
+    items: [],
+    tool: null,
+    lastTool: null,
+    mouseDir: 'N',
+    wallOrientation: 'H',
+    hoverWorld: null,
+    draggingMap: false,
+    draggingItem: false,
+    dragStartScreen: null,
+    dragStartOffset: null,
+    selectedIds: new Set(),
+    selectedItemId: null,
+    groupDragStart: null,
+    pointerId: null,
+    suppressClick: false,
+    touchStartTime: 0,
+  };
+
+  let nextId = 1;
+
+  function setStatus(text){ statusEl.textContent = text; }
+
+  function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
+
+  function screenToWorld(sx, sy){
+    return {
+      x: (sx - state.offsetX) / state.scale,
+      y: (sy - state.offsetY) / state.scale
+    };
+  }
+
+  function worldToScreen(wx, wy){
+    return {
+      x: wx * state.scale + state.offsetX,
+      y: wy * state.scale + state.offsetY
+    };
+  }
+
+  function mapWidth(){ return state.cols * state.tileSize; }
+  function mapHeight(){ return state.rows * state.tileSize; }
+
+  function resizeCanvas(){
+    const rect = stageWrap.getBoundingClientRect();
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    canvas.width = Math.floor(rect.width * dpr);
+    canvas.height = Math.floor(rect.height * dpr);
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    draw();
+  }
+
+  function draw(){
+    const rect = stageWrap.getBoundingClientRect();
+    ctx.clearRect(0,0,rect.width,rect.height);
+    ctx.save();
+    ctx.translate(state.offsetX, state.offsetY);
+    ctx.scale(state.scale, state.scale);
+
+    ctx.fillStyle = state.groundColor;
+    ctx.fillRect(0,0,mapWidth(),mapHeight());
+
+    ctx.strokeStyle = state.gridColor;
+    ctx.lineWidth = 1 / state.scale;
+    ctx.beginPath();
+    for(let c=0;c<=state.cols;c++){
+      const x = c * state.tileSize;
+      ctx.moveTo(x,0); ctx.lineTo(x,mapHeight());
+    }
+    for(let r=0;r<=state.rows;r++){
+      const y = r * state.tileSize;
+      ctx.moveTo(0,y); ctx.lineTo(mapWidth(),y);
+    }
+    ctx.stroke();
+
+    for(const item of state.items) drawItem(item);
+
+    if(state.tool && state.hoverWorld){
+      const preview = makePreviewItem(state.tool, state.hoverWorld);
+      if(preview){
+        ctx.globalAlpha = 0.55;
+        drawItem(preview, true);
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    ctx.restore();
+    updateSelectionBox();
+  }
+
+  function drawItem(item, preview=false){
+    const t = state.tileSize;
+    const selected = state.selectedIds.has(item.id) || state.selectedItemId === item.id;
+    ctx.save();
+
+    if(item.type === 'wall'){
+      const x = item.x * t;
+      const y = item.y * t;
+      ctx.strokeStyle = item.color || state.wallColor;
+      ctx.lineWidth = Math.max(4, t * 0.12);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      if(item.orientation === 'H'){
+        ctx.moveTo(x, y);
+        ctx.lineTo(x+t, y);
+      }else{
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y+t);
+      }
+      ctx.stroke();
+
+      if(selected && !preview){
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = Math.max(1.5, t*0.04);
+        ctx.setLineDash([t*0.12,t*0.08]);
+        ctx.beginPath();
+        if(item.orientation === 'H'){ ctx.moveTo(x,y); ctx.lineTo(x+t,y); }
+        else { ctx.moveTo(x,y); ctx.lineTo(x,y+t); }
+        ctx.stroke();
+      }
+    } else {
+      const x = item.x * t;
+      const y = item.y * t;
+      const cx = x + t/2, cy = y + t/2;
+
+      if(selected && !preview){
+        ctx.strokeStyle='#ffffff';
+        ctx.lineWidth=Math.max(2,t*0.05);
+        ctx.setLineDash([t*0.12,t*0.08]);
+        ctx.strokeRect(x+t*0.08,y+t*0.08,t*0.84,t*0.84);
+        ctx.setLineDash([]);
+      }
+
+      if(item.type === 'mouse'){
+        ctx.fillStyle='#ffffff';
+        ctx.strokeStyle='#333333';
+        ctx.lineWidth=Math.max(1.5,t*0.045);
+        ctx.beginPath();
+        ctx.ellipse(cx,cy+t*0.05,t*0.22,t*0.18,0,0,Math.PI*2);
+        ctx.fill(); ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(cx-t*0.15, cy-t*0.1, t*0.08,0,Math.PI*2);
+        ctx.arc(cx+t*0.15, cy-t*0.1, t*0.08,0,Math.PI*2);
+        ctx.fill(); ctx.stroke();
+
+        ctx.fillStyle='#222';
+        ctx.beginPath();
+        ctx.arc(cx,cy+t*0.03,t*0.025,0,Math.PI*2);
+        ctx.fill();
+
+        drawDirectionArrow(cx,cy,item.dir || 'N',t);
+      }
+      if(item.type === 'exit'){
+        ctx.fillStyle='#f4cf29';
+        ctx.strokeStyle='#6d5700';
+        ctx.lineWidth=Math.max(1.5,t*0.045);
+        roundRect(ctx,x+t*0.08,y+t*0.18,t*0.84,t*0.64,t*0.10);
+        ctx.fill();ctx.stroke();
+        ctx.fillStyle='#1b1b1b';
+        ctx.font=`bold ${Math.max(10,t*0.23)}px system-ui`;
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText('EXIT',cx,cy);
+      }
+      if(item.type === 'cake'){
+        ctx.font=`${Math.max(18,t*0.68)}px Apple Color Emoji,Segoe UI Emoji,sans-serif`;
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText('🍰',cx,cy+t*0.04);
+      }
+    }
+    ctx.restore();
+  }
+
+  function roundRect(ctx,x,y,w,h,r){
+    const rr=Math.min(r,w/2,h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr,y);
+    ctx.arcTo(x+w,y,x+w,y+h,rr);
+    ctx.arcTo(x+w,y+h,x,y+h,rr);
+    ctx.arcTo(x,y+h,x,y,rr);
+    ctx.arcTo(x,y,x+w,y,rr);
+    ctx.closePath();
+  }
+
+  function drawDirectionArrow(cx,cy,dir,t){
+    const vectors = {N:[0,-1],E:[1,0],S:[0,1],W:[-1,0]};
+    const [dx,dy]=vectors[dir] || vectors.N;
+    const sx=cx-dx*t*0.05, sy=cy-dy*t*0.05;
+    const ex=cx+dx*t*0.34, ey=cy+dy*t*0.34;
+    ctx.strokeStyle='#e53935';
+    ctx.fillStyle='#e53935';
+    ctx.lineWidth=Math.max(2,t*0.06);
+    ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.stroke();
+    const px=-dy, py=dx;
+    ctx.beginPath();
+    ctx.moveTo(ex,ey);
+    ctx.lineTo(ex-dx*t*0.15+px*t*0.09,ey-dy*t*0.15+py*t*0.09);
+    ctx.lineTo(ex-dx*t*0.15-px*t*0.09,ey-dy*t*0.15-py*t*0.09);
+    ctx.closePath();ctx.fill();
+  }
+
+  function makePreviewItem(tool, world){
+    const t=state.tileSize;
+    if(world.x < -t || world.y < -t || world.x > mapWidth()+t || world.y > mapHeight()+t) return null;
+
+    if(tool === 'wall'){
+      const gx = world.x / t, gy = world.y / t;
+      const fracX = gx - Math.floor(gx);
+      const fracY = gy - Math.floor(gy);
+      const distV = Math.min(fracX,1-fracX);
+      const distH = Math.min(fracY,1-fracY);
+      const orientation = distH <= distV ? 'H' : 'V';
+
+      if(orientation === 'H'){
+        const row = clamp(Math.round(gy),0,state.rows);
+        const col = clamp(Math.floor(gx),0,state.cols-1);
+        state.wallOrientation = 'H';
+        return {id:-1,type:'wall',x:col,y:row,orientation:'H',color:state.wallColor};
+      }else{
+        const col = clamp(Math.round(gx),0,state.cols);
+        const row = clamp(Math.floor(gy),0,state.rows-1);
+        state.wallOrientation = 'V';
+        return {id:-1,type:'wall',x:col,y:row,orientation:'V',color:state.wallColor};
+      }
+    }
+
+    const col=clamp(Math.floor(world.x/t),0,state.cols-1);
+    const row=clamp(Math.floor(world.y/t),0,state.rows-1);
+    return {id:-1,type:tool,x:col,y:row,dir:state.mouseDir};
+  }
+
+  function placeCurrentTool(world){
+    if(!state.tool) return;
+    const item=makePreviewItem(state.tool,world);
+    if(!item) return;
+    item.id=nextId++;
+    if(item.type==='wall') item.color=state.wallColor;
+    state.items.push(item);
+    state.lastTool=state.tool;
+    state.selectedIds.clear();
+    state.selectedItemId=null;
+    setStatus(`${capitalize(item.type)} placed. Tool stays active; Esc cancels.`);
+    draw();
+  }
+
+  function capitalize(s){return s.charAt(0).toUpperCase()+s.slice(1)}
+
+  function setTool(tool){
+    state.tool=tool;
+    state.lastTool=tool;
+    state.selectedItemId=null;
+    state.selectedIds.clear();
+    document.querySelectorAll('[data-tool]').forEach(btn=>btn.classList.toggle('active',btn.dataset.tool===tool));
+    setStatus(`${capitalize(tool)} selected. Click/tap map to place. Esc cancels.`);
+    draw();
+  }
+
+  function cancelTool(){
+    state.tool=null;
+    state.selectedItemId=null;
+    state.selectedIds.clear();
+    document.querySelectorAll('[data-tool]').forEach(btn=>btn.classList.remove('active'));
+    setStatus('Selection cancelled.');
+    draw();
+  }
+
+  function hitTest(world){
+    const t=state.tileSize;
+    for(let i=state.items.length-1;i>=0;i--){
+      const item=state.items[i];
+      if(item.type==='wall'){
+        const px=world.x, py=world.y;
+        const x=item.x*t, y=item.y*t;
+        const tol=Math.max(6,t*0.16);
+        if(item.orientation==='H'){
+          if(px>=x-tol&&px<=x+t+tol&&Math.abs(py-y)<=tol) return item;
+        }else{
+          if(py>=y-tol&&py<=y+t+tol&&Math.abs(px-x)<=tol) return item;
+        }
+      }else{
+        const x=item.x*t,y=item.y*t;
+        if(world.x>=x&&world.x<=x+t&&world.y>=y&&world.y<=y+t) return item;
+      }
+    }
+    return null;
+  }
+
+  function pointerPos(e){
+    const r=canvas.getBoundingClientRect();
+    return {x:e.clientX-r.left,y:e.clientY-r.top};
+  }
+
+  canvas.addEventListener('pointerdown',e=>{
+    canvas.setPointerCapture(e.pointerId);
+    state.pointerId=e.pointerId;
+    const p=pointerPos(e);
+    const world=screenToWorld(p.x,p.y);
+    state.touchStartTime=performance.now();
+
+    if(state.tool){
+      placeCurrentTool(world);
+      state.suppressClick=true;
+      return;
+    }
+
+    const hit=hitTest(world);
+    if(hit){
+      state.selectedItemId=hit.id;
+      state.selectedIds.clear();
+      state.selectedIds.add(hit.id);
+      state.draggingItem=true;
+      state.dragStartScreen=p;
+      state.groupDragStart=state.items
+        .filter(it=>state.selectedIds.has(it.id))
+        .map(it=>({id:it.id,x:it.x,y:it.y}));
+      setStatus(`${capitalize(hit.type)} selected. Drag to move. Mouse arrows rotate. Click toolbar/number for new item.`);
+      draw();
+      return;
+    }
+
+    state.draggingMap=true;
+    state.dragStartScreen=p;
+    state.dragStartOffset={x:state.offsetX,y:state.offsetY};
+    state.selectedItemId=null;
+    state.selectedIds.clear();
+    draw();
+  });
+
+  canvas.addEventListener('pointermove',e=>{
+    const p=pointerPos(e);
+    const world=screenToWorld(p.x,p.y);
+    state.hoverWorld=world;
+
+    if(state.draggingMap&&state.dragStartScreen){
+      const dx=p.x-state.dragStartScreen.x;
+      const dy=p.y-state.dragStartScreen.y;
+      if(Math.hypot(dx,dy)>3) state.suppressClick=true;
+      state.offsetX=state.dragStartOffset.x+dx;
+      state.offsetY=state.dragStartOffset.y+dy;
+      draw(); return;
+    }
+
+    if(state.draggingItem&&state.dragStartScreen&&state.groupDragStart){
+      const dxWorld=(p.x-state.dragStartScreen.x)/state.scale;
+      const dyWorld=(p.y-state.dragStartScreen.y)/state.scale;
+      const dc=Math.round(dxWorld/state.tileSize);
+      const dr=Math.round(dyWorld/state.tileSize);
+      for(const start of state.groupDragStart){
+        const it=state.items.find(x=>x.id===start.id);
+        if(!it) continue;
+        it.x=start.x+dc;
+        it.y=start.y+dr;
+      }
+      draw(); return;
+    }
+
+    if(state.tool) draw();
+  });
+
+  canvas.addEventListener('pointerup',e=>{
+    if(state.draggingItem){
+      constrainSelectedIntoMap();
+    }
+    state.draggingMap=false;
+    state.draggingItem=false;
+    state.dragStartScreen=null;
+    state.groupDragStart=null;
+    state.pointerId=null;
+    setTimeout(()=>state.suppressClick=false,0);
+    draw();
+  });
+
+  canvas.addEventListener('pointercancel',()=>{
+    state.draggingMap=false;
+    state.draggingItem=false;
+    state.dragStartScreen=null;
+    state.groupDragStart=null;
+    state.pointerId=null;
+  });
+
+  canvas.addEventListener('wheel',e=>{
+    e.preventDefault();
+    const p=pointerPos(e);
+    zoomAt(p.x,p.y,e.deltaY<0?1.12:0.89);
+  },{passive:false});
+
+  function zoomAt(sx,sy,factor){
+    const before=screenToWorld(sx,sy);
+    state.scale=clamp(state.scale*factor,0.15,6);
+    state.offsetX=sx-before.x*state.scale;
+    state.offsetY=sy-before.y*state.scale;
+    draw();
+  }
+
+  function zoomCenter(factor){
+    const r=stageWrap.getBoundingClientRect();
+    zoomAt(r.width/2,r.height/2,factor);
+  }
+
+  document.getElementById('zoomInBtn').onclick=()=>zoomCenter(1.2);
+  document.getElementById('zoomOutBtn').onclick=()=>zoomCenter(1/1.2);
+
+  document.querySelectorAll('[data-tool]').forEach(btn=>{
+    btn.addEventListener('click',()=>setTool(btn.dataset.tool));
+  });
+
+  function rotateSelectedOrTool(dir=null){
+    const order=['N','E','S','W'];
+    if(state.tool==='mouse'){
+      if(dir) state.mouseDir=dir;
+      else state.mouseDir=order[(order.indexOf(state.mouseDir)+1)%4];
+      setStatus(`Mouse facing ${state.mouseDir}.`);
+      draw(); return;
+    }
+
+    const selected=state.items.find(i=>i.id===state.selectedItemId);
+    if(selected?.type==='mouse'){
+      selected.dir=dir || order[(order.indexOf(selected.dir||'N')+1)%4];
+      setStatus(`Mouse facing ${selected.dir}.`);
+      draw(); return;
+    }
+    if(selected?.type==='wall'){
+      selected.orientation=selected.orientation==='H'?'V':'H';
+      setStatus(`Wall rotated ${selected.orientation}.`);
+      draw();
+    }
+  }
+
+  document.getElementById('rotateBtn').onclick=()=>rotateSelectedOrTool();
+  document.getElementById('cancelBtn').onclick=cancelTool;
+
+  window.addEventListener('keydown',e=>{
+    const tag=document.activeElement?.tagName;
+    if(tag==='INPUT'||tag==='SELECT') return;
+
+    if(e.key==='1'){setTool('wall');return}
+    if(e.key==='2'){setTool('mouse');return}
+    if(e.key==='3'){setTool('exit');return}
+    if(e.key==='4'){setTool('cake');return}
+    if(e.key==='Escape'){cancelTool();return}
+    if(e.key.toLowerCase()==='r'){rotateSelectedOrTool();return}
+    if(e.key==='Delete'||e.key==='Backspace'){deleteSelected();return}
+
+    const dirMap={ArrowUp:'N',ArrowRight:'E',ArrowDown:'S',ArrowLeft:'W'};
+    if(dirMap[e.key]){
+      const selected=state.items.find(i=>i.id===state.selectedItemId);
+      if(state.tool==='mouse'||selected?.type==='mouse'){
+        e.preventDefault();
+        rotateSelectedOrTool(dirMap[e.key]);
+      }
+    }
+  });
+
+  document.getElementById('selectAllBtn').onclick=()=>{
+    state.tool=null;
+    document.querySelectorAll('[data-tool]').forEach(btn=>btn.classList.remove('active'));
+    state.selectedIds=new Set(state.items.map(i=>i.id));
+    state.selectedItemId=null;
+    setStatus(`${state.selectedIds.size} item(s) selected. Drag any selected item to move all.`);
+    draw();
+  };
+
+  function deleteSelected(){
+    if(!state.selectedIds.size && state.selectedItemId==null) return;
+    const ids=new Set(state.selectedIds);
+    if(state.selectedItemId!=null) ids.add(state.selectedItemId);
+    state.items=state.items.filter(i=>!ids.has(i.id));
+    state.selectedIds.clear();
+    state.selectedItemId=null;
+    setStatus(`${ids.size} item(s) deleted.`);
+    draw();
+  }
+  document.getElementById('deleteBtn').onclick=deleteSelected;
+
+  function getCreationBounds(){
+    if(!state.items.length) return null;
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    for(const it of state.items){
+      if(it.type==='wall'){
+        if(it.orientation==='H'){
+          minX=Math.min(minX,it.x); maxX=Math.max(maxX,it.x+1);
+          minY=Math.min(minY,it.y); maxY=Math.max(maxY,it.y);
+        }else{
+          minX=Math.min(minX,it.x); maxX=Math.max(maxX,it.x);
+          minY=Math.min(minY,it.y); maxY=Math.max(maxY,it.y+1);
+        }
+      }else{
+        minX=Math.min(minX,it.x); maxX=Math.max(maxX,it.x+1);
+        minY=Math.min(minY,it.y); maxY=Math.max(maxY,it.y+1);
+      }
+    }
+    return {minX,minY,maxX,maxY,width:maxX-minX,height:maxY-minY};
+  }
+
+  function shiftAll(dc,dr){
+    for(const it of state.items){it.x+=dc;it.y+=dr}
+  }
+
+  function constrainCreationForResize(oldCols,oldRows){
+    const b=getCreationBounds();
+    if(!b) return true;
+
+    if(b.width>state.cols||b.height>state.rows){
+      state.cols=oldCols;state.rows=oldRows;
+      controls.cols.value=oldCols;controls.rows.value=oldRows;
+      setStatus('Map cannot be reduced: creation is larger than requested map.');
+      return false;
+    }
+
+    let dc=0,dr=0;
+    if(b.minX<0) dc=-b.minX;
+    if(b.maxX+dc>state.cols) dc+=state.cols-(b.maxX+dc);
+    if(b.minY<0) dr=-b.minY;
+    if(b.maxY+dr>state.rows) dr+=state.rows-(b.maxY+dr);
+    if(dc||dr) shiftAll(dc,dr);
+    return true;
+  }
+
+  function constrainSelectedIntoMap(){
+    const items=state.items.filter(it=>state.selectedIds.has(it.id)||it.id===state.selectedItemId);
+    if(!items.length) return;
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    for(const it of items){
+      const ex=it.type==='wall'&&it.orientation==='V'?it.x:it.x+1;
+      const ey=it.type==='wall'&&it.orientation==='H'?it.y:it.y+1;
+      minX=Math.min(minX,it.x);minY=Math.min(minY,it.y);
+      maxX=Math.max(maxX,ex);maxY=Math.max(maxY,ey);
+    }
+    let dc=0,dr=0;
+    if(minX<0) dc=-minX;
+    if(maxX+dc>state.cols) dc+=state.cols-(maxX+dc);
+    if(minY<0) dr=-minY;
+    if(maxY+dr>state.rows) dr+=state.rows-(maxY+dr);
+    for(const it of items){it.x+=dc;it.y+=dr}
+  }
+
+  function fitCreation(){
+    const b=getCreationBounds();
+    if(!b){ fitMap(); return; }
+    const rect=stageWrap.getBoundingClientRect();
+    const margin=60;
+    const w=Math.max(state.tileSize,(b.maxX-b.minX)*state.tileSize);
+    const h=Math.max(state.tileSize,(b.maxY-b.minY)*state.tileSize);
+    state.scale=clamp(Math.min((rect.width-margin*2)/w,(rect.height-margin*2)/h),0.15,6);
+    const cx=((b.minX+b.maxX)/2)*state.tileSize;
+    const cy=((b.minY+b.maxY)/2)*state.tileSize;
+    state.offsetX=rect.width/2-cx*state.scale;
+    state.offsetY=rect.height/2-cy*state.scale;
+    setStatus('View fitted to creation.');
+    draw();
+  }
+  document.getElementById('fitBtn').onclick=fitCreation;
+
+  function fitMap(){
+    const rect=stageWrap.getBoundingClientRect();
+    const margin=40;
+    state.scale=clamp(Math.min((rect.width-margin*2)/mapWidth(),(rect.height-margin*2)/mapHeight()),0.15,6);
+    state.offsetX=(rect.width-mapWidth()*state.scale)/2;
+    state.offsetY=(rect.height-mapHeight()*state.scale)/2;
+    draw();
+  }
+  document.getElementById('resetViewBtn').onclick=fitMap;
+
+  let prevCols=state.cols, prevRows=state.rows;
+  controls.cols.addEventListener('change',()=>{
+    const old=state.cols;
+    state.cols=clamp(parseInt(controls.cols.value)||1,1,200);
+    controls.cols.value=state.cols;
+    if(!constrainCreationForResize(old,state.rows)){ state.cols=old; }
+    prevCols=state.cols; draw();
+  });
+  controls.rows.addEventListener('change',()=>{
+    const old=state.rows;
+    state.rows=clamp(parseInt(controls.rows.value)||1,1,200);
+    controls.rows.value=state.rows;
+    if(!constrainCreationForResize(state.cols,old)){ state.rows=old; }
+    prevRows=state.rows; draw();
+  });
+  controls.tileSize.addEventListener('change',()=>{
+    state.tileSize=clamp(parseInt(controls.tileSize.value)||40,8,160);
+    controls.tileSize.value=state.tileSize;
+    fitMap();
+  });
+  controls.groundColor.addEventListener('input',()=>{state.groundColor=controls.groundColor.value;draw()});
+  controls.gridColor.addEventListener('input',()=>{state.gridColor=controls.gridColor.value;draw()});
+  controls.wallColor.addEventListener('input',()=>{state.wallColor=controls.wallColor.value;draw()});
+
+  function exportData(){
+    return {
+      format:'ACT_MAP_CREATOR',
+      version:1,
+      createdBy:'GPT-5.6 Sol',
+      map:{
+        cols:state.cols,
+        rows:state.rows,
+        tileSize:state.tileSize,
+        groundColor:state.groundColor,
+        gridColor:state.gridColor,
+        wallColor:state.wallColor
+      },
+      legend:{
+        wall:'Wall segment on a grid line. x,y are grid-line anchor coordinates; orientation is H or V.',
+        mouse:'Agent occupying one tile. x,y are tile coordinates; dir is N,E,S,W.',
+        exit:'Exit sign occupying one tile.',
+        cake:'Reward occupying one tile.'
+      },
+      items:state.items.map(it=>({...it}))
+    };
+  }
+
+  function downloadBlob(blob,filename){
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+  }
+
+  document.getElementById('exportJsonBtn').onclick=()=>{
+    const blob=new Blob([JSON.stringify(exportData(),null,2)],{type:'application/json'});
+    downloadBlob(blob,'ACT_Map_Creator_by_GPT-5.6-Sol.json');
+    setStatus('AI-readable JSON saved.');
+  };
+
+  document.getElementById('importJsonBtn').onclick=()=>document.getElementById('jsonFileInput').click();
+  document.getElementById('jsonFileInput').addEventListener('change',async e=>{
+    const file=e.target.files?.[0];
+    if(!file) return;
+    try{
+      const data=JSON.parse(await file.text());
+      if(!data.map||!Array.isArray(data.items)) throw new Error('Invalid format');
+      state.cols=clamp(Number(data.map.cols)||20,1,200);
+      state.rows=clamp(Number(data.map.rows)||12,1,200);
+      state.tileSize=clamp(Number(data.map.tileSize)||40,8,160);
+      state.groundColor=data.map.groundColor||'#d8c49a';
+      state.gridColor=data.map.gridColor||'#111111';
+      state.wallColor=data.map.wallColor||'#8b5a2b';
+      state.items=data.items.map((it,idx)=>({...it,id:Number(it.id)||idx+1}));
+      nextId=Math.max(1,...state.items.map(i=>i.id+1));
+      controls.cols.value=state.cols;
+      controls.rows.value=state.rows;
+      controls.tileSize.value=state.tileSize;
+      controls.groundColor.value=state.groundColor;
+      controls.gridColor.value=state.gridColor;
+      controls.wallColor.value=state.wallColor;
+      state.selectedIds.clear();state.selectedItemId=null;state.tool=null;
+      fitMap();
+      setStatus(`Loaded ${state.items.length} item(s) from JSON.`);
+    }catch(err){
+      alert('Cannot load this JSON file.');
+    }finally{
+      e.target.value='';
+    }
+  });
+
+  document.getElementById('exportPngBtn').onclick=()=>{
+    const out=document.createElement('canvas');
+    out.width=Math.max(1,Math.round(mapWidth()));
+    out.height=Math.max(1,Math.round(mapHeight()));
+    const octx=out.getContext('2d');
+
+    octx.fillStyle=state.groundColor;
+    octx.fillRect(0,0,out.width,out.height);
+
+    octx.strokeStyle=state.gridColor;
+    octx.lineWidth=1;
+    octx.beginPath();
+    for(let c=0;c<=state.cols;c++){
+      const x=c*state.tileSize;octx.moveTo(x,0);octx.lineTo(x,mapHeight());
+    }
+    for(let r=0;r<=state.rows;r++){
+      const y=r*state.tileSize;octx.moveTo(0,y);octx.lineTo(mapWidth(),y);
+    }
+    octx.stroke();
+
+    const oldCtx=window.__ctxHack;
+    const originalCtx=ctx;
+    // Draw using a small local renderer to avoid changing visible canvas.
+    function drawOut(it){
+      const t=state.tileSize;
+      if(it.type==='wall'){
+        octx.strokeStyle=it.color||state.wallColor;
+        octx.lineWidth=Math.max(4,t*0.12);
+        octx.lineCap='round';octx.beginPath();
+        if(it.orientation==='H'){octx.moveTo(it.x*t,it.y*t);octx.lineTo((it.x+1)*t,it.y*t)}
+        else{octx.moveTo(it.x*t,it.y*t);octx.lineTo(it.x*t,(it.y+1)*t)}
+        octx.stroke();return;
+      }
+      const x=it.x*t,y=it.y*t,cx=x+t/2,cy=y+t/2;
+      if(it.type==='mouse'){
+        octx.fillStyle='#fff';octx.strokeStyle='#333';octx.lineWidth=Math.max(1.5,t*0.045);
+        octx.beginPath();octx.ellipse(cx,cy+t*0.05,t*0.22,t*0.18,0,0,Math.PI*2);octx.fill();octx.stroke();
+        octx.beginPath();octx.arc(cx-t*0.15,cy-t*0.1,t*0.08,0,Math.PI*2);octx.arc(cx+t*0.15,cy-t*0.1,t*0.08,0,Math.PI*2);octx.fill();octx.stroke();
+        const vectors={N:[0,-1],E:[1,0],S:[0,1],W:[-1,0]},[dx,dy]=vectors[it.dir||'N'];
+        octx.strokeStyle='#e53935';octx.fillStyle='#e53935';octx.lineWidth=Math.max(2,t*0.06);
+        const sx=cx-dx*t*0.05,sy=cy-dy*t*0.05,ex=cx+dx*t*0.34,ey=cy+dy*t*0.34,px=-dy,py=dx;
+        octx.beginPath();octx.moveTo(sx,sy);octx.lineTo(ex,ey);octx.stroke();
+        octx.beginPath();octx.moveTo(ex,ey);octx.lineTo(ex-dx*t*0.15+px*t*0.09,ey-dy*t*0.15+py*t*0.09);octx.lineTo(ex-dx*t*0.15-px*t*0.09,ey-dy*t*0.15-py*t*0.09);octx.closePath();octx.fill();
+      }else if(it.type==='exit'){
+        octx.fillStyle='#f4cf29';octx.strokeStyle='#6d5700';octx.lineWidth=Math.max(1.5,t*0.045);
+        octx.fillRect(x+t*0.08,y+t*0.18,t*0.84,t*0.64);octx.strokeRect(x+t*0.08,y+t*0.18,t*0.84,t*0.64);
+        octx.fillStyle='#1b1b1b';octx.font=`bold ${Math.max(10,t*0.23)}px system-ui`;octx.textAlign='center';octx.textBaseline='middle';octx.fillText('EXIT',cx,cy);
+      }else if(it.type==='cake'){
+        octx.font=`${Math.max(18,t*0.68)}px Apple Color Emoji,Segoe UI Emoji,sans-serif`;octx.textAlign='center';octx.textBaseline='middle';octx.fillText('🍰',cx,cy+t*0.04);
+      }
+    }
+    state.items.forEach(drawOut);
+    out.toBlob(blob=>{
+      if(blob) downloadBlob(blob,'ACT_Map_Creator_by_GPT-5.6-Sol.png');
+    },'image/png');
+    setStatus('PNG saved.');
+  };
+
+  // Double-click/tap an empty map area to re-arm the last used tool.
+  let lastTap=0;
+  canvas.addEventListener('dblclick',e=>{
+    if(state.lastTool&&!state.tool){
+      setTool(state.lastTool);
+    }
+  });
+  canvas.addEventListener('pointerup',e=>{
+    if(e.pointerType==='touch'){
+      const now=performance.now();
+      if(now-lastTap<350 && state.lastTool && !state.tool && !state.draggingMap && !state.draggingItem){
+        setTool(state.lastTool);
+      }
+      lastTap=now;
+    }
+  });
+
+  window.addEventListener('resize',resizeCanvas);
+  resizeCanvas();
+  requestAnimationFrame(fitMap);
+})();
+</script>
+</body>
+</html>
